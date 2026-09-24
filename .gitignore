@@ -43,3 +43,6 @@ Thumbs.db
 
 # Uploads locaux
 backend/uploads/
+
+AGENTS.md
+CLAUDE.md
