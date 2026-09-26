@@ -51,7 +51,52 @@ model Product {
 
   categoryId    String
   category      Category @relation(fields: [categoryId], references: [id])
+  orderItems    OrderItem[]
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PREPARING
+  TO_DELIVER
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  status          OrderStatus @default(NEW)
+
+  customerName    String
+  customerPhone   String
+  customerAddress String
+  city            String
+  comment         String?
+
+  subtotal        Float
+  deliveryFee     Float       @default(0)
+  total           Float
+
+  paymentMethod   String
+
+  items           OrderItem[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  quantity  Int
+  unitPrice Float
+
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id])
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 }
