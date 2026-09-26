@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { getProducts } from '@/lib/api';
 
 export default async function Home() {
@@ -12,9 +13,10 @@ export default async function Home() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {products.map((product: any) => (
-            <div
+            <Link
               key={product.id}
-              className="border rounded-lg p-4 shadow-sm hover:shadow-md transition"
+              href={`/produit/${product.id}`}
+              className="border rounded-lg p-4 shadow-sm hover:shadow-md transition block"
             >
               <h2 className="font-semibold text-lg">{product.name}</h2>
               <p className="text-sm text-gray-500">{product.category?.name}</p>
@@ -35,7 +37,7 @@ export default async function Home() {
               <p className="text-xs text-gray-400 mt-1">
                 Stock : {product.stock}
               </p>
-            </div>
+            </Link>
           ))}
         </div>
       )}

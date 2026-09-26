@@ -17,3 +17,9 @@ export async function getSettings() {
   if (!res.ok) throw new Error('Failed to fetch settings');
   return res.json();
 }
+
+export async function getProductById(id: string) {
+  const res = await fetch(`${API_URL}/products/${id}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch product');
+  return res.json();
+}
