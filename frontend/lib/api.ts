@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import { getToken } from '@/lib/auth';
 
 export async function getProducts() {
   const res = await fetch(`${API_URL}/products`, { cache: 'no-store' });
@@ -62,5 +63,91 @@ export async function login(email: string, password: string) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.message || 'Login failed');
   }
+  return res.json();
+}
+
+
+function authHeaders() {
+  const token = getToken();
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+export async function createProduct(data: any) {
+  const res = await fetch(`${API_URL}/products`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create product');
+  return res.json();
+}
+
+export async function updateProduct(id: string, data: any) {
+  const res = await fetch(`${API_URL}/products/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update product');
+  return res.json();
+}
+
+export async function deleteProduct(id: string) {
+  const res = await fetch(`${API_URL}/products/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete product');
+  return res.json();
+}
+
+export async function createCategory(data: any) {
+  const res = await fetch(`${API_URL}/categories`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create category');
+  return res.json();
+}
+
+export async function updateCategory(id: string, data: any) {
+  const res = await fetch(`${API_URL}/categories/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update category');
+  return res.json();
+}
+
+export async function deleteCategory(id: string) {
+  const res = await fetch(`${API_URL}/categories/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete category');
+  return res.json();
+}
+
+export async function getOrders() {
+  const res = await fetch(`${API_URL}/orders`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+export async function updateOrderStatus(id: string, status: string) {
+  const res = await fetch(`${API_URL}/orders/${id}/status`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error('Failed to update order status');
   return res.json();
 }
