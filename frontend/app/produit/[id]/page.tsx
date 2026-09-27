@@ -1,5 +1,6 @@
 import { getProductById } from '@/lib/api';
 import Link from 'next/link';
+import AddToCartButton from './add-to-cart-button';
 
 export default async function ProductPage({
   params,
@@ -55,9 +56,12 @@ export default async function ProductPage({
           </div>
         )}
 
-        <button className="mt-6 bg-black text-white px-6 py-3 rounded-lg hover:opacity-90 transition">
-          Ajouter au panier
-        </button>
+        <AddToCartButton
+          productId={product.id}
+          name={product.name}
+          price={product.promoPrice ?? product.price}
+          stock={product.stock}
+        />
       </div>
     </main>
   );

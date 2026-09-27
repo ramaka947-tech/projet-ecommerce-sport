@@ -6,7 +6,12 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-8">Catalogue produits</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Catalogue produits</h1>
+        <Link href="/panier" className="text-blue-400 hover:underline">
+          Voir le panier →
+        </Link>
+      </div>
 
       {products.length === 0 ? (
         <p className="text-gray-500">Aucun produit disponible.</p>
