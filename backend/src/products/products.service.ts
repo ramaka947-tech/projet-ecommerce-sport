@@ -5,14 +5,47 @@ import { UpdateProductDto } from './dto/update-product.dto.js';
 
 @Injectable()
 export class ProductsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   create(createProductDto: CreateProductDto) {
     return this.prisma.product.create({ data: createProductDto });
   }
 
-  findAll() {
-    return this.prisma.product.findMany({ include: { category: true } });
+  findAll(filters: {
+    categoryId?: string;
+    search?: string;
+    sort?: string;
+    minPrice?: string;
+    maxPrice?: string;
+  } = {}) {
+    const { categoryId, search, sort, minPrice, maxPrice } = filters;
+
+    const where: any = {};
+
+    if (categoryId) where.categoryId = categoryId;
+
+    if (search && search.trim() !== '') {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { sku: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = Number(minPrice);
+      if (maxPrice) where.price.lte = Number(maxPrice);
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (sort === 'price_asc') orderBy = { price: 'asc' };
+    else if (sort === 'price_desc') orderBy = { price: 'desc' };
+
+    return this.prisma.product.findMany({
+      where,
+      orderBy,
+      include: { category: true },
+    });
   }
 
   async findOne(id: string) {
@@ -20,9 +53,7 @@ export class ProductsService {
       where: { id },
       include: { category: true },
     });
-    if (!product) {
-      throw new NotFoundException(`Product ${id} not found`);
-    }
+    if (!product) throw new NotFoundException(`Product ${id} not found`);
     return product;
   }
 
