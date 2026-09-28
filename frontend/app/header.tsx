@@ -11,6 +11,8 @@ export default async function Header() {
       <nav className="flex gap-4 text-sm">
         <Link href="/" className="hover:underline">Boutique</Link>
         <Link href="/panier" className="hover:underline">Panier</Link>
+        <Link href="/a-propos" className="hover:underline">À propos</Link>
+        <Link href="/contact" className="hover:underline">Contact</Link>
       </nav>
     </header>
   );
