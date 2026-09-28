@@ -164,3 +164,12 @@ export async function updateSettings(data: Record<string, string>) {
   if (!res.ok) throw new Error('Failed to update settings');
   return res.json();
 }
+
+export async function getStats(period: string = '30d') {
+  const res = await fetch(`${API_URL}/stats?period=${period}`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch stats');
+  return res.json();
+}
