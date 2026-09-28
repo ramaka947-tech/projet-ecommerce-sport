@@ -2,6 +2,7 @@
 
 import { useCart } from '@/lib/cart-context';
 import Link from 'next/link';
+import BackButton from './back-button';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, subtotal } = useCart();
@@ -11,16 +12,19 @@ export default function CartPage() {
       <main className="min-h-screen p-8">
         <h1 className="text-3xl font-bold mb-4">Panier</h1>
         <p className="text-gray-500">Votre panier est vide.</p>
-        <Link href="/" className="text-blue-400 hover:underline mt-4 inline-block">
-          ← Retour au catalogue
-        </Link>
+        <div className="mt-4">
+          <BackButton />
+        </div>
       </main>
     );
   }
 
   return (
     <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-8">Panier</h1>
+      <h1 className="text-3xl font-bold mb-4">Panier</h1>
+      <div className="mb-6">
+        <BackButton />
+      </div>
 
       <div className="max-w-2xl space-y-4">
         {items.map((item) => (
