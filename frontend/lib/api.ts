@@ -154,3 +154,13 @@ export async function updateOrderStatus(id: string, status: string) {
   if (!res.ok) throw new Error('Failed to update order status');
   return res.json();
 }
+
+export async function updateSettings(data: Record<string, string>) {
+  const res = await fetch(`${API_URL}/settings`, {
+    method: 'PUT',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update settings');
+  return res.json();
+}

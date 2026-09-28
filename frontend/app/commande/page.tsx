@@ -1,16 +1,15 @@
 'use client';
 
 import { useCart } from '@/lib/cart-context';
-import { createOrder } from '@/lib/api';
-import { useState } from 'react';
+import { createOrder, getSettings } from '@/lib/api';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-
-const DELIVERY_FEE = 2000;
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const router = useRouter();
+
+  const [deliveryFee, setDeliveryFee] = useState(0);
 
   const [form, setForm] = useState({
     customerName: '',
@@ -23,21 +22,30 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    getSettings()
+      .then((s) => setDeliveryFee(Number(s.delivery_fee) || 0))
+      .catch(() => {});
+  }, []);
+
   if (items.length === 0) {
     return (
       <main className="min-h-screen p-8">
-        <h1 className="text-3xl font-bold mb-4">Commande</h1>
+        <h1 className="text-3xl font-bold mb-8">Commande</h1>
         <p className="text-gray-500">Votre panier est vide.</p>
-        <Link href="/" className="text-blue-400 hover:underline mt-4 inline-block">
-          ← Retour au catalogue
-        </Link>
+        <button
+          onClick={() => router.back()}
+          className="text-blue-400 hover:underline mt-4 inline-block"
+        >
+          ← Retour au panier
+        </button>
       </main>
     );
   }
 
   const handleChange = (
-  e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-) => {
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -49,7 +57,7 @@ export default function CheckoutPage() {
     try {
       const order = await createOrder({
         ...form,
-        deliveryFee: DELIVERY_FEE,
+        deliveryFee,
         items: items.map((i) => ({
           productId: i.productId,
           quantity: i.quantity,
@@ -63,11 +71,18 @@ export default function CheckoutPage() {
     }
   };
 
-  const total = subtotal + DELIVERY_FEE;
+  const total = subtotal + deliveryFee;
 
   return (
     <main className="min-h-screen p-8">
-      <h1 className="text-3xl font-bold mb-8">Finaliser la commande</h1>
+      <h1 className="text-3xl font-bold mb-4">Finaliser la commande</h1>
+
+      <button
+        onClick={() => router.back()}
+        className="text-blue-400 hover:underline mb-6"
+      >
+        ← Retour au panier
+      </button>
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -175,7 +190,7 @@ export default function CheckoutPage() {
             </div>
             <div className="flex justify-between text-sm">
               <span>Livraison</span>
-              <span>{DELIVERY_FEE} €</span>
+              <span>{deliveryFee} €</span>
             </div>
             <div className="flex justify-between font-semibold text-lg mt-2">
               <span>Total</span>

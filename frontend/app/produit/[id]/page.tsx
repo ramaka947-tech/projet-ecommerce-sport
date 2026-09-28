@@ -1,6 +1,6 @@
 import { getProductById } from '@/lib/api';
-import Link from 'next/link';
 import AddToCartButton from './add-to-cart-button';
+import BackButton from './back-button';
 
 export default async function ProductPage({
   params,
@@ -12,9 +12,7 @@ export default async function ProductPage({
 
   return (
     <main className="min-h-screen p-8">
-      <Link href="/" className="text-sm text-blue-400 hover:underline">
-        ← Retour au catalogue
-      </Link>
+      <BackButton />
 
       <div className="mt-6 max-w-2xl">
         <h1 className="text-3xl font-bold">{product.name}</h1>

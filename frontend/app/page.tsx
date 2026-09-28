@@ -11,26 +11,24 @@ export default function Home() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
-  const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [sort, setSort] = useState(searchParams.get('sort') || 'recent');
-  const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
-  const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
+
+  // Les filtres sont dérivés de l'URL : source de vérité unique.
+  const categoryId = searchParams.get('categoryId') || '';
+  const search = searchParams.get('search') || '';
+  const sort = searchParams.get('sort') || 'recent';
+  const minPrice = searchParams.get('minPrice') || '';
+  const maxPrice = searchParams.get('maxPrice') || '';
+
+  function setFilter(key: string, value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) params.set(key, value);
+    else params.delete(key);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
 
   useEffect(() => {
     getCategories().then(setCategories);
   }, []);
-
-  // Synchronise l'URL avec les filtres actuels
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (categoryId) params.set('categoryId', categoryId);
-    if (search) params.set('search', search);
-    if (sort && sort !== 'recent') params.set('sort', sort);
-    if (minPrice) params.set('minPrice', minPrice);
-    if (maxPrice) params.set('maxPrice', maxPrice);
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [categoryId, search, sort, minPrice, maxPrice]);
 
   useEffect(() => {
     getProducts({ categoryId, search, sort, minPrice, maxPrice }).then(setProducts);
@@ -40,9 +38,6 @@ export default function Home() {
     <main className="min-h-screen p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Catalogue produits</h1>
-        <Link href="/panier" className="text-blue-400 hover:underline">
-          Voir le panier →
-        </Link>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-8">
@@ -50,12 +45,12 @@ export default function Home() {
           type="text"
           placeholder="Rechercher..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setFilter('search', e.target.value)}
           className="border rounded px-3 py-2"
         />
         <select
           value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
+          onChange={(e) => setFilter('categoryId', e.target.value)}
           className="border rounded px-3 py-2"
         >
           <option value="">Toutes catégories</option>
@@ -67,19 +62,19 @@ export default function Home() {
           type="number"
           placeholder="Prix min"
           value={minPrice}
-          onChange={(e) => setMinPrice(e.target.value)}
+          onChange={(e) => setFilter('minPrice', e.target.value)}
           className="border rounded px-3 py-2 w-28"
         />
         <input
           type="number"
           placeholder="Prix max"
           value={maxPrice}
-          onChange={(e) => setMaxPrice(e.target.value)}
+          onChange={(e) => setFilter('maxPrice', e.target.value)}
           className="border rounded px-3 py-2 w-28"
         />
         <select
           value={sort}
-          onChange={(e) => setSort(e.target.value)}
+          onChange={(e) => setFilter('sort', e.target.value)}
           className="border rounded px-3 py-2"
         >
           <option value="recent">Plus récents</option>
@@ -87,10 +82,7 @@ export default function Home() {
           <option value="price_desc">Prix décroissant</option>
         </select>
         <button
-          onClick={() => {
-            setSearch(''); setCategoryId(''); setSort('recent');
-            setMinPrice(''); setMaxPrice('');
-          }}
+          onClick={() => router.replace(pathname, { scroll: false })}
           className="border rounded px-3 py-2 text-sm hover:bg-gray-100"
         >
           Réinitialiser
