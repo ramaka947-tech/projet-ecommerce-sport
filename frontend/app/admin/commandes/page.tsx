@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import AdminGuard from '@/lib/admin-guard';
 import { getOrders, updateOrderStatus } from '@/lib/api';
+import Link from 'next/link';
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Nouvelle',
@@ -58,7 +59,11 @@ export default function AdminOrdersPage() {
           <tbody>
             {orders.map((o) => (
               <tr key={o.id} className="border-b">
-                <td className="py-3">{o.orderNumber}</td>
+                <td className="py-3">
+                  <Link href={`/admin/commandes/${o.id}`} className="text-blue-400 hover:underline">
+                    {o.orderNumber}
+                  </Link>
+                </td>
                 <td className="py-3">{o.customerName}</td>
                 <td className="py-3">{o.customerPhone}</td>
                 <td className="py-3">{o.total.toFixed(2)} €</td>
