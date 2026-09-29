@@ -173,3 +173,67 @@ export async function getStats(period: string = '30d') {
   if (!res.ok) throw new Error('Failed to fetch stats');
   return res.json();
 }
+
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getToken();
+  const res = await fetch(`${API_URL}/upload`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.url;
+}
+
+export async function getSizes() {
+  const res = await fetch(`${API_URL}/sizes`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch sizes');
+  return res.json();
+}
+
+export async function createSize(name: string) {
+  const res = await fetch(`${API_URL}/sizes`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create size');
+  return res.json();
+}
+
+export async function deleteSize(id: string) {
+  const res = await fetch(`${API_URL}/sizes/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete size');
+  return res.json();
+}
+
+export async function getColors() {
+  const res = await fetch(`${API_URL}/colors`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch colors');
+  return res.json();
+}
+
+export async function createColor(name: string) {
+  const res = await fetch(`${API_URL}/colors`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create color');
+  return res.json();
+}
+
+export async function deleteColor(id: string) {
+  const res = await fetch(`${API_URL}/colors/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete color');
+  return res.json();
+}

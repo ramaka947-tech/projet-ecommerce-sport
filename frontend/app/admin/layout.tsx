@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin/commandes', label: 'Commandes' },
   { href: '/admin/settings', label: 'Réglages' },
   { href: '/admin/statistiques', label: 'Statistiques' },
+  { href: '/admin/attributs', label: 'Tailles & couleurs' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
