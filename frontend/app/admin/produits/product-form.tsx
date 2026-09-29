@@ -32,10 +32,11 @@ export default function ProductForm({ categories, product }: Props) {
 
   const [availableSizes, setAvailableSizes] = useState<any[]>([]);
   const [availableColors, setAvailableColors] = useState<any[]>([]);
+  const [onSale, setOnSale] = useState(!!product?.promoPrice);
 
   useEffect(() => {
-    getSizes().then(setAvailableSizes).catch(() => {});
-    getColors().then(setAvailableColors).catch(() => {});
+    getSizes().then(setAvailableSizes).catch(() => { });
+    getColors().then(setAvailableColors).catch(() => { });
   }, []);
 
   const toggleSize = (name: string) => {
@@ -92,7 +93,7 @@ export default function ProductForm({ categories, product }: Props) {
     const payload = {
       ...form,
       price: parseFloat(form.price as any),
-      promoPrice: form.promoPrice ? parseFloat(form.promoPrice as any) : undefined,
+      promoPrice: onSale && form.promoPrice ? parseFloat(form.promoPrice as any) : null,
       stock: parseInt(form.stock as any, 10),
     };
 
@@ -158,17 +159,43 @@ export default function ProductForm({ categories, product }: Props) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">
-            Prix promo (€)
+          <div>
+            <label className="block text-sm font-medium mb-1">Prix (€)</label>
+            <input
+              name="price"
+              type="number"
+              step="0.01"
+              required
+              value={form.price}
+              onChange={handleChange}
+              className="w-full border rounded-lg px-3 py-2 bg-transparent"
+            />
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={onSale}
+              onChange={(e) => setOnSale(e.target.checked)}
+            />
+            En promotion
           </label>
-          <input
-            name="promoPrice"
-            type="number"
-            step="0.01"
-            value={form.promoPrice}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-3 py-2 bg-transparent"
-          />
+
+          {onSale && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Prix promo (€)</label>
+              <input
+                name="promoPrice"
+                type="number"
+                step="0.01"
+                required
+                value={form.promoPrice}
+                onChange={handleChange}
+                className="w-full border rounded-lg px-3 py-2 bg-transparent"
+              />
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -213,9 +240,8 @@ export default function ProductForm({ categories, product }: Props) {
           {availableSizes.map((s) => (
             <label
               key={s.id}
-              className={`border rounded px-3 py-1 text-sm cursor-pointer ${
-                form.sizes.includes(s.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
-              }`}
+              className={`border rounded px-3 py-1 text-sm cursor-pointer ${form.sizes.includes(s.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
+                }`}
             >
               <input
                 type="checkbox"
@@ -246,9 +272,8 @@ export default function ProductForm({ categories, product }: Props) {
           {availableColors.map((c) => (
             <label
               key={c.id}
-              className={`border rounded px-3 py-1 text-sm cursor-pointer ${
-                form.colors.includes(c.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
-              }`}
+              className={`border rounded px-3 py-1 text-sm cursor-pointer ${form.colors.includes(c.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
+                }`}
             >
               <input
                 type="checkbox"

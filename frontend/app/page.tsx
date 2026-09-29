@@ -18,6 +18,7 @@ export default function Home() {
   const sort = searchParams.get('sort') || 'recent';
   const minPrice = searchParams.get('minPrice') || '';
   const maxPrice = searchParams.get('maxPrice') || '';
+  const onSale = searchParams.get('onSale') || '';
 
   function setFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -31,8 +32,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    getProducts({ categoryId, search, sort, minPrice, maxPrice }).then(setProducts);
-  }, [categoryId, search, sort, minPrice, maxPrice]);
+    getProducts({ categoryId, search, sort, minPrice, maxPrice, onSale }).then(setProducts);
+  }, [categoryId, search, sort, minPrice, maxPrice, onSale]);
 
   return (
     <main className="min-h-screen p-8">
@@ -81,6 +82,16 @@ export default function Home() {
           <option value="price_asc">Prix croissant</option>
           <option value="price_desc">Prix décroissant</option>
         </select>
+
+        <label className="flex items-center gap-2 border rounded px-3 py-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={onSale === 'true'}
+            onChange={(e) => setFilter('onSale', e.target.checked ? 'true' : '')}
+          />
+          En promo
+        </label>
+
         <button
           onClick={() => router.replace(pathname, { scroll: false })}
           className="border rounded px-3 py-2 text-sm hover:bg-gray-100"
@@ -99,6 +110,13 @@ export default function Home() {
               href={`/produit/${product.id}`}
               className="border rounded-lg p-4 shadow-sm hover:shadow-md transition block"
             >
+              {product.images?.[0] && (
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full h-40 object-cover rounded mb-3"
+                />
+              )}
               <h2 className="font-semibold text-lg">{product.name}</h2>
               <p className="text-sm text-gray-500">{product.category?.name}</p>
               <div className="mt-2">
