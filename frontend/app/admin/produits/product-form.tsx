@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createProduct, updateProduct } from '@/lib/api';
+import { createProduct, updateProduct, uploadImage, getSizes, getColors } from '@/lib/api';
 
 type Props = {
   categories: any[];
@@ -22,9 +22,57 @@ export default function ProductForm({ categories, product }: Props) {
     stock: product?.stock ?? 0,
     categoryId: product?.categoryId || '',
     isPublished: product?.isPublished ?? true,
+    images: product?.images || [],
+    sizes: product?.sizes || [],
+    colors: product?.colors || [],
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const [availableSizes, setAvailableSizes] = useState<any[]>([]);
+  const [availableColors, setAvailableColors] = useState<any[]>([]);
+
+  useEffect(() => {
+    getSizes().then(setAvailableSizes).catch(() => {});
+    getColors().then(setAvailableColors).catch(() => {});
+  }, []);
+
+  const toggleSize = (name: string) => {
+    setForm((f) => ({
+      ...f,
+      sizes: f.sizes.includes(name)
+        ? f.sizes.filter((s: string) => s !== name)
+        : [...f.sizes, name],
+    }));
+  };
+
+  const toggleColor = (name: string) => {
+    setForm((f) => ({
+      ...f,
+      colors: f.colors.includes(name)
+        ? f.colors.filter((c: string) => c !== name)
+        : [...f.colors, name],
+    }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      setForm((f) => ({ ...f, images: [...f.images, url] }));
+    } catch (err: any) {
+      setError('Échec de l\'upload');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (url: string) => {
+    setForm((f) => ({ ...f, images: f.images.filter((i: string) => i !== url) }));
+  };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -155,6 +203,100 @@ export default function ProductForm({ categories, product }: Props) {
             ))}
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Tailles disponibles (optionnel)
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {availableSizes.map((s) => (
+            <label
+              key={s.id}
+              className={`border rounded px-3 py-1 text-sm cursor-pointer ${
+                form.sizes.includes(s.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="hidden"
+                checked={form.sizes.includes(s.name)}
+                onChange={() => toggleSize(s.name)}
+              />
+              {s.name}
+            </label>
+          ))}
+          {availableSizes.length === 0 && (
+            <p className="text-sm text-gray-500">
+              Aucune taille définie. Ajoutez-en dans{' '}
+              <a href="/admin/attributs" className="underline">
+                Tailles & couleurs
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-2">
+          Couleurs disponibles (optionnel)
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {availableColors.map((c) => (
+            <label
+              key={c.id}
+              className={`border rounded px-3 py-1 text-sm cursor-pointer ${
+                form.colors.includes(c.name) ? 'bg-black text-white' : 'hover:bg-gray-100'
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="hidden"
+                checked={form.colors.includes(c.name)}
+                onChange={() => toggleColor(c.name)}
+              />
+              {c.name}
+            </label>
+          ))}
+          {availableColors.length === 0 && (
+            <p className="text-sm text-gray-500">
+              Aucune couleur définie. Ajoutez-en dans{' '}
+              <a href="/admin/attributs" className="underline">
+                Tailles & couleurs
+              </a>
+              .
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Images</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          disabled={uploading}
+          className="w-full text-sm"
+        />
+        {uploading && <p className="text-xs text-gray-500 mt-1">Upload en cours...</p>}
+        {form.images.length > 0 && (
+          <div className="flex flex-wrap gap-3 mt-3">
+            {form.images.map((url: string) => (
+              <div key={url} className="relative">
+                <img src={url} alt="" className="w-24 h-24 object-cover rounded border" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(url)}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-sm">
