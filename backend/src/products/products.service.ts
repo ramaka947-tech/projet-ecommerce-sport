@@ -17,8 +17,9 @@ export class ProductsService {
     sort?: string;
     minPrice?: string;
     maxPrice?: string;
+    onSale?: string;
   } = {}) {
-    const { categoryId, search, sort, minPrice, maxPrice } = filters;
+    const { categoryId, search, sort, minPrice, maxPrice, onSale } = filters;
 
     const where: any = {};
 
@@ -35,6 +36,10 @@ export class ProductsService {
       where.price = {};
       if (minPrice) where.price.gte = Number(minPrice);
       if (maxPrice) where.price.lte = Number(maxPrice);
+    }
+
+    if (onSale === 'true') {
+      where.promoPrice = { not: null };
     }
 
     let orderBy: any = { createdAt: 'desc' };
