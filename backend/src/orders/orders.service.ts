@@ -15,8 +15,8 @@ export class OrdersService {
     return `CMD-${timestamp}${random}`;
   }
 
-    async create(createOrderDto: CreateOrderDto) {
-    const { items, deliveryFee = 0, ...customerInfo } = createOrderDto;
+  async create(createOrderDto: CreateOrderDto) {
+    const { items, deliveryFee = 0, customerId, ...customerInfo } = createOrderDto;
 
     if (!items || items.length === 0) {
       throw new BadRequestException('Order must contain at least one item');
@@ -53,12 +53,11 @@ export class OrdersService {
       data: {
         orderNumber: this.generateOrderNumber(),
         ...customerInfo,
+        customerId: customerId || null,
         subtotal,
         deliveryFee,
         total,
-        items: {
-          create: orderItemsData,
-        },
+        items: { create: orderItemsData },
       },
       include: { items: { include: { product: true } } },
     });
