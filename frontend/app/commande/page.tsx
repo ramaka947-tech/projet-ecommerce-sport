@@ -4,10 +4,13 @@ import { useCart } from '@/lib/cart-context';
 import { createOrder, getSettings } from '@/lib/api';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCustomerAuth } from '@/lib/customer-auth-context';
+import Link from 'next/link';
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
   const router = useRouter();
+  const { customer, isLoggedIn } = useCustomerAuth();
 
   const [deliveryFee, setDeliveryFee] = useState(0);
 
@@ -27,6 +30,17 @@ export default function CheckoutPage() {
       .then((s) => setDeliveryFee(Number(s.delivery_fee) || 0))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (customer) {
+      setForm((f) => ({
+        ...f,
+        customerName: f.customerName || customer.name,
+        customerPhone: f.customerPhone || customer.phone,
+        city: f.city || customer.region || '',
+      }));
+    }
+  }, [customer]);
 
   if (items.length === 0) {
     return (
@@ -57,6 +71,7 @@ export default function CheckoutPage() {
     try {
       const order = await createOrder({
         ...form,
+        customerId: customer?.id,
         deliveryFee,
         items: items.map((i) => ({
           productId: i.productId,
@@ -83,6 +98,19 @@ export default function CheckoutPage() {
       >
         ← Retour au panier
       </button>
+
+      {!isLoggedIn && (
+        <div className="mb-6 p-4 border rounded-lg text-sm max-w-4xl">
+          <Link href="/compte/connexion" className="text-blue-400 hover:underline">
+            Se connecter
+          </Link>{' '}
+          ou{' '}
+          <Link href="/compte/inscription" className="text-blue-400 hover:underline">
+            créer un compte
+          </Link>{' '}
+          pour retrouver vos commandes. Ou continuez en invité ci-dessous.
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
         <form onSubmit={handleSubmit} className="space-y-4">

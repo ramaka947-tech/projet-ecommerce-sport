@@ -9,7 +9,8 @@ export class CreateOrderDto {
   customerAddress: string;
   city: string;
   comment?: string;
-  paymentMethod: string;
   deliveryFee?: number;
-  items: OrderItemDto[];
+  paymentMethod: string;
+  customerId?: string;
+  items: { productId: string; quantity: number }[];
 }

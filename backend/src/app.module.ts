@@ -10,9 +10,10 @@ import { AuthModule } from './auth/auth.module.js';
 import { StatsModule } from './stats/stats.module.js';
 import { UploadModule } from './upload/upload.module.js';
 import { AttributesModule } from './attributes/attributes.module.js';
+import { CustomersModule } from './customers/customers.module.js';
 
 @Module({
-  imports: [SettingsModule, PrismaModule, CategoriesModule, ProductsModule, OrdersModule, AuthModule, StatsModule, UploadModule, AttributesModule],
+  imports: [SettingsModule, PrismaModule, CategoriesModule, ProductsModule, OrdersModule, AuthModule, StatsModule, UploadModule, AttributesModule, CustomersModule],
   controllers: [AppController],
   providers: [AppService],
 })

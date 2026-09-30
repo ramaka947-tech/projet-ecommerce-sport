@@ -36,6 +36,7 @@ export async function createOrder(orderData: {
   comment?: string;
   paymentMethod: string;
   deliveryFee?: number;
+  customerId?: string;
   items: { productId: string; quantity: number }[];
 }) {
   const res = await fetch(`${API_URL}/orders`, {
@@ -235,5 +236,54 @@ export async function deleteColor(id: string) {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to delete color');
+  return res.json();
+}
+
+export async function registerCustomer(data: {
+  name: string; email: string; password: string; phone: string;
+  country?: string; region?: string; district?: string;
+}) {
+  const res = await fetch(`${API_URL}/customer-auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Register failed');
+  }
+  return res.json();
+}
+
+export async function loginCustomer(email: string, password: string) {
+  const res = await fetch(`${API_URL}/customer-auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Login failed');
+  }
+  return res.json();
+}
+
+export async function getMeCustomer() {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/me`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch customer');
+  return res.json();
+}
+
+export async function getMyOrders() {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/orders`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
   return res.json();
 }
