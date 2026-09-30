@@ -58,12 +58,12 @@ export default function ProductForm({ categories, product }: Props) {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const url = await uploadImage(file);
-      setForm((f) => ({ ...f, images: [...f.images, url] }));
+      const urls = await Promise.all(Array.from(files).map(uploadImage));
+      setForm((f) => ({ ...f, images: [...f.images, ...urls] }));
     } catch (err: any) {
       setError('Échec de l\'upload');
     } finally {
@@ -301,6 +301,7 @@ export default function ProductForm({ categories, product }: Props) {
         <input
           type="file"
           accept="image/*"
+          multiple
           onChange={handleImageUpload}
           disabled={uploading}
           className="w-full text-sm"

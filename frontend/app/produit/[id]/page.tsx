@@ -1,6 +1,7 @@
 import { getProductById } from '@/lib/api';
 import AddToCartButton from './add-to-cart-button';
 import BackButton from './back-button';
+import ImageGallery from './image-gallery';
 
 export default async function ProductPage({
   params,
@@ -15,6 +16,12 @@ export default async function ProductPage({
       <BackButton />
 
       <div className="mt-6 max-w-2xl">
+        {product.images?.length > 0 && (
+          <div className="mb-6">
+            <ImageGallery images={product.images} alt={product.name} />
+          </div>
+        )}
+
         <h1 className="text-3xl font-bold">{product.name}</h1>
         <p className="text-gray-500 mt-1">{product.category?.name}</p>
 
@@ -48,6 +55,19 @@ export default async function ProductPage({
               {product.sizes.map((size: string) => (
                 <span key={size} className="border rounded px-3 py-1 text-sm">
                   {size}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {product.colors?.length > 0 && (
+          <div className="mt-4">
+            <p className="text-sm font-semibold mb-1">Couleurs disponibles</p>
+            <div className="flex gap-2">
+              {product.colors.map((color: string) => (
+                <span key={color} className="border rounded px-3 py-1 text-sm">
+                  {color}
                 </span>
               ))}
             </div>
