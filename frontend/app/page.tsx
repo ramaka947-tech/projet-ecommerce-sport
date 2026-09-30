@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { getProducts, getCategories } from '@/lib/api';
+import ProductCardImages from './product-card-images';
 
 export default function Home() {
   const router = useRouter();
@@ -110,13 +111,7 @@ export default function Home() {
               href={`/produit/${product.id}`}
               className="border rounded-lg p-4 shadow-sm hover:shadow-md transition block"
             >
-              {product.images?.[0] && (
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-40 object-cover rounded mb-3"
-                />
-              )}
+              <ProductCardImages images={product.images} alt={product.name} />
               <h2 className="font-semibold text-lg">{product.name}</h2>
               <p className="text-sm text-gray-500">{product.category?.name}</p>
               <div className="mt-2">
