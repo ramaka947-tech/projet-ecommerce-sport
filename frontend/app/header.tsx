@@ -35,7 +35,7 @@ export default function Header() {
   const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <header className="border-b px-6 py-3 flex items-center gap-6">
+    <header className="hidden md:flex border-b px-6 py-3 items-center gap-6">
       <Link href="/" className="text-2xl font-extrabold whitespace-nowrap">
         {shopName}
       </Link>

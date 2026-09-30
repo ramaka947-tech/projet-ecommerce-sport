@@ -4,6 +4,7 @@ import { CartProvider } from "@/lib/cart-context";
 import Header from "./header";
 import Footer from "./footer";
 import { CustomerAuthProvider } from '@/lib/customer-auth-context';
+import MobileNav from './mobile-nav';
 
 export const metadata: Metadata = {
   title: "SportPro",
@@ -13,12 +14,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <CartProvider>
           <CustomerAuthProvider>
             <Header />
             <div className="flex-1">{children}</div>
             <Footer />
+            <MobileNav />
           </CustomerAuthProvider>
         </CartProvider>
       </body>
