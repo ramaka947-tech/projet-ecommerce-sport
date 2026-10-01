@@ -5,6 +5,7 @@ import Header from "./header";
 import Footer from "./footer";
 import { CustomerAuthProvider } from '@/lib/customer-auth-context';
 import MobileNav from './mobile-nav';
+import TopBar from './top-bar';
 
 export const metadata: Metadata = {
   title: "SportPro",
@@ -17,7 +18,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col pb-16 md:pb-0">
         <CartProvider>
           <CustomerAuthProvider>
-            <Header />
+            <div className="sticky top-0 z-40">
+              <TopBar />
+              <Header />
+            </div>
             <div className="flex-1">{children}</div>
             <Footer />
             <MobileNav />
