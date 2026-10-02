@@ -287,3 +287,17 @@ export async function getMyOrders() {
   if (!res.ok) throw new Error('Failed to fetch orders');
   return res.json();
 }
+
+export async function uploadVideo(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getToken();
+  const res = await fetch(`${API_URL}/upload/video`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.url;
+}

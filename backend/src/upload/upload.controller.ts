@@ -22,4 +22,13 @@ export class UploadController {
     const url = await this.uploadService.uploadImage(file);
     return { url };
   }
+
+  @Post('video')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadVideo(@UploadedFile() file: { buffer: Buffer }) {
+    if (!file) throw new BadRequestException('No file provided');
+    const url = await this.uploadService.uploadVideo(file);
+    return { url };
+  }
 }
