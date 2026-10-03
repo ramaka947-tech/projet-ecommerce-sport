@@ -120,3 +120,12 @@ model Customer {
   updatedAt DateTime @updatedAt
   orders    Order[]
 }
+
+model HeroMedia {
+  id        String   @id @default(cuid())
+  type      String   // "image" ou "video"
+  url       String
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
