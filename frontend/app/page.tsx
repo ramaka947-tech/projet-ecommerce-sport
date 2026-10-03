@@ -8,12 +8,16 @@ import ProductCardImages from './product-card-images';
 export default function HomePage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [popular, setPopular] = useState<any[]>([]);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getCategories().then(setCategories).catch(() => { });
-    getProducts({ sort: 'recent' }).then((p: any[]) => setPopular(p.slice(0, 4))).catch(() => { });
-    getSettings().then(setSettings).catch(() => { });
+    getCategories().then(setCategories).catch(() => {});
+    getProducts({ sort: 'recent' }).then((p: any[]) => {
+      setPopular(p.slice(0, 4));
+      setNewArrivals(p.slice(4, 8));
+    }).catch(() => {});
+    getSettings().then(setSettings).catch(() => {});
   }, []);
 
   return (
@@ -133,6 +137,26 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Nouveautés */}
+      <section className="max-w-7xl mx-auto px-6 pb-16">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-3xl font-extrabold text-gray-900">Nouveautés</h2>
+          <Link href="/boutique" className="text-yellow-600 font-semibold hover:underline">
+            Tout voir
+          </Link>
+        </div>
+
+        {newArrivals.length === 0 ? (
+          <p className="text-gray-500">Aucun produit.</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {newArrivals.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
