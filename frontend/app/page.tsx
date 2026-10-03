@@ -2,13 +2,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { Dumbbell, Circle, Target, Zap, Footprints, Package } from 'lucide-react';
-import { getCategories, getProducts } from '@/lib/api';
+import { getCategories, getProducts, getSettings } from '@/lib/api';
 import ProductCardImages from './product-card-images';
 
 export default function HomePage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [popular, setPopular] = useState<any[]>([]);
   const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const [settings, setSettings] = useState<Record<string, string>>({});
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
@@ -16,42 +17,56 @@ export default function HomePage() {
       setPopular(p.slice(0, 4));
       setNewArrivals(p.slice(4, 8));
     }).catch(() => {});
+    getSettings().then(setSettings).catch(() => {});
   }, []);
 
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <section className="bg-green-900 text-white">
-        <div className="max-w-7xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h1 className="text-5xl md:text-6xl font-extrabold leading-tight mb-6">
-              ÉQUIPEZ CHAQUE SÉANCE
-            </h1>
-            <p className="text-lg md:text-xl mb-8 text-green-100">
-              Trouvez tout l'équipement de sport pour vos entraînements.
-              Livraison rapide sur Dakar et partout au Sénégal.
-            </p>
-            <div className="flex flex-wrap gap-4">
+      <section className="relative h-[85vh] min-h-[600px] overflow-hidden bg-gray-900">
+        {settings.hero_video ? (
+          <video
+            src={settings.hero_video}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : settings.hero_image ? (
+          <img
+            src={settings.hero_image}
+            alt="Hero"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : null}
+
+        <div className="absolute inset-0 bg-black/60" />
+
+        <div className="relative z-10 h-full max-w-7xl mx-auto px-6 flex flex-col justify-center text-white">
+          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 max-w-3xl">
+            {settings.hero_title || 'Bienvenue'}
+          </h1>
+          <p className="text-lg md:text-xl mb-8 text-gray-100 max-w-2xl">
+            {settings.hero_subtitle || ''}
+          </p>
+          <div className="flex flex-wrap gap-4">
+            {settings.hero_primary_label && (
               <Link
-                href="/boutique"
+                href={settings.hero_primary_link || '/boutique'}
                 className="bg-yellow-500 text-black font-semibold px-8 py-3 rounded-lg hover:opacity-90"
               >
-                Voir la boutique
+                {settings.hero_primary_label}
               </Link>
+            )}
+            {settings.hero_secondary_label && (
               <Link
-                href="/boutique?onSale=true"
-                className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-green-900"
+                href={settings.hero_secondary_link || '/boutique'}
+                className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-gray-900"
               >
-                Promotions
+                {settings.hero_secondary_label}
               </Link>
-            </div>
-          </div>
-          <div className="hidden md:block">
-            <div className="bg-green-800/40 rounded-2xl p-8 flex items-center justify-center h-96">
-              <p className="text-green-200 text-center">
-                [Illustration sportive à venir]
-              </p>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -100,24 +115,28 @@ export default function HomePage() {
       </section>
 
       {/* Bandeau promo */}
-      <section className="max-w-7xl mx-auto px-6 pb-16">
-        <div className="bg-yellow-500 rounded-2xl px-8 py-10 md:px-12 md:py-12 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div>
-            <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2">
-              JUSQU'À -30% SUR LA MUSCULATION
-            </h2>
-            <p className="text-gray-800 md:text-lg">
-              Haltères, barres et tapis en promotion cette semaine.
-            </p>
+      {settings.promo_banner_enabled === 'true' && (
+        <section className="max-w-7xl mx-auto px-6 pb-16">
+          <div className="bg-yellow-500 rounded-2xl px-8 py-10 md:px-12 md:py-12 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div>
+              <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 mb-2">
+                {settings.promo_banner_title}
+              </h2>
+              <p className="text-gray-800 md:text-lg">
+                {settings.promo_banner_subtitle}
+              </p>
+            </div>
+            {settings.promo_banner_button_label && (
+              <Link
+                href={settings.promo_banner_link || '/boutique'}
+                className="bg-gray-900 text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 whitespace-nowrap"
+              >
+                {settings.promo_banner_button_label}
+              </Link>
+            )}
           </div>
-          <Link
-            href="/boutique?onSale=true"
-            className="bg-green-900 text-white font-semibold px-8 py-3 rounded-lg hover:opacity-90 whitespace-nowrap"
-          >
-            Voir les promotions
-          </Link>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Nouveautés */}
       <section className="max-w-7xl mx-auto px-6 pb-16">
