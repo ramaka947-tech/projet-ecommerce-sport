@@ -288,6 +288,51 @@ export async function getMyOrders() {
   return res.json();
 }
 
+// ---- Hero Media ----
+export async function getHeroMedia() {
+  const res = await fetch(`${API_URL}/hero-media`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch hero media');
+  return res.json();
+}
+
+export async function getAllHeroMedia() {
+  const res = await fetch(`${API_URL}/hero-media/all`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch hero media');
+  return res.json();
+}
+
+export async function createHeroMedia(data: { type: string; url: string }) {
+  const res = await fetch(`${API_URL}/hero-media`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create hero media');
+  return res.json();
+}
+
+export async function updateHeroMedia(id: string, data: { url?: string; isActive?: boolean; position?: number }) {
+  const res = await fetch(`${API_URL}/hero-media/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update hero media');
+  return res.json();
+}
+
+export async function deleteHeroMedia(id: string) {
+  const res = await fetch(`${API_URL}/hero-media/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete hero media');
+  return res.json();
+}
+
 export async function uploadVideo(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);

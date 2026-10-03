@@ -25,15 +25,16 @@ export class UploadService {
   }
 
   async uploadVideo(file: { buffer: Buffer }): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'sportpro', resource_type: 'video', quality: 'auto:best' },
-        (error, result) => {
-          if (error || !result) return reject(error);
-          resolve(result.secure_url);
-        },
-      );
-      stream.end(file.buffer);
-    });
-  }
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'sportpro', resource_type: 'video' },
+      (error, result) => {
+        if (error || !result) return reject(error);
+        resolve(result.secure_url);
+      },
+    );
+    stream.end(file.buffer);
+  });
+}
+
 }
