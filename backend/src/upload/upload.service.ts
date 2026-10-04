@@ -14,7 +14,7 @@ export class UploadService {
   async uploadImage(file: { buffer: Buffer }): Promise<string> {
     return new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: 'sportpro', resource_type: 'image' },
+        { folder: 'sportpro', resource_type: 'image', quality: 'auto:best' },
         (error, result) => {
           if (error || !result) return reject(error);
           resolve(result.secure_url);
@@ -36,4 +36,5 @@ export class UploadService {
       stream.end(file.buffer);
     });
   }
+
 }

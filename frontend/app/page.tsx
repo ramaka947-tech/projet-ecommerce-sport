@@ -4,68 +4,65 @@ import { useEffect, useState } from 'react';
 import { Dumbbell, Circle, Target, Zap, Footprints, Package } from 'lucide-react';
 import { getCategories, getProducts, getSettings } from '@/lib/api';
 import ProductCardImages from './product-card-images';
+import HeroCarousel from './hero-carousel';
+import { getHeroMedia } from '@/lib/api';
 
 export default function HomePage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [popular, setPopular] = useState<any[]>([]);
   const [newArrivals, setNewArrivals] = useState<any[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [heroMedia, setHeroMedia] = useState<any[]>([]);
 
   useEffect(() => {
-    getCategories().then(setCategories).catch(() => {});
+    getCategories().then(setCategories).catch(() => { });
     getProducts({ sort: 'recent' }).then((p: any[]) => {
       setPopular(p.slice(0, 4));
       setNewArrivals(p.slice(4, 8));
-    }).catch(() => {});
-    getSettings().then(setSettings).catch(() => {});
+    }).catch(() => { });
+    getSettings().then(setSettings).catch(() => { });
+    getHeroMedia().then(setHeroMedia).catch(() => { });
   }, []);
 
   return (
     <main className="min-h-screen bg-gray-50">
       {/* Hero */}
-      <section className="relative h-[85vh] min-h-[600px] overflow-hidden bg-gray-900">
-        {settings.hero_video ? (
-          <video
-            src={settings.hero_video}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : settings.hero_image ? (
-          <img
-            src={settings.hero_image}
-            alt="Hero"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        ) : null}
+      <section className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-16 md:py-20 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
+              {settings.hero_title || 'Bienvenue'}
+            </h1>
+            <p className="text-lg md:text-xl mb-8 text-gray-300">
+              {settings.hero_subtitle || ''}
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {settings.hero_primary_label && (
+                <Link
+                  href={settings.hero_primary_link || '/boutique'}
+                  className="bg-yellow-500 text-black font-semibold px-8 py-3 rounded-lg hover:opacity-90"
+                >
+                  {settings.hero_primary_label}
+                </Link>
+              )}
+              {settings.hero_secondary_label && (
+                <Link
+                  href={settings.hero_secondary_link || '/boutique'}
+                  className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-gray-900"
+                >
+                  {settings.hero_secondary_label}
+                </Link>
+              )}
+            </div>
+          </div>
 
-        <div className="absolute inset-0 bg-black/60" />
-
-        <div className="relative z-10 h-full max-w-7xl mx-auto px-6 flex flex-col justify-center text-white">
-          <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 max-w-3xl">
-            {settings.hero_title || 'Bienvenue'}
-          </h1>
-          <p className="text-lg md:text-xl mb-8 text-gray-100 max-w-2xl">
-            {settings.hero_subtitle || ''}
-          </p>
-          <div className="flex flex-wrap gap-4">
-            {settings.hero_primary_label && (
-              <Link
-                href={settings.hero_primary_link || '/boutique'}
-                className="bg-yellow-500 text-black font-semibold px-8 py-3 rounded-lg hover:opacity-90"
-              >
-                {settings.hero_primary_label}
-              </Link>
-            )}
-            {settings.hero_secondary_label && (
-              <Link
-                href={settings.hero_secondary_link || '/boutique'}
-                className="border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-gray-900"
-              >
-                {settings.hero_secondary_label}
-              </Link>
+          <div className="relative w-full h-80 md:h-[500px]">
+            {heroMedia.length > 0 ? (
+              <HeroCarousel media={heroMedia} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                Aucun média
+              </div>
             )}
           </div>
         </div>

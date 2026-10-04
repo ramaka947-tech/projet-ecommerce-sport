@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getSettings, updateSettings, uploadImage, uploadVideo } from '@/lib/api';
+import { getSettings, updateSettings } from '@/lib/api';
 
 export default function SettingsPage() {
   const [form, setForm] = useState({
@@ -12,8 +12,6 @@ export default function SettingsPage() {
     hero_primary_link: '',
     hero_secondary_label: '',
     hero_secondary_link: '',
-    hero_image: '',
-    hero_video: '',
     promo_banner_enabled: 'true',
     promo_banner_title: '',
     promo_banner_subtitle: '',
@@ -22,7 +20,6 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -40,34 +37,6 @@ export default function SettingsPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleHeroImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadImage(file);
-      setForm((f) => ({ ...f, hero_image: url }));
-    } catch {
-      setMessage("Échec de l'upload");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleHeroVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const url = await uploadVideo(file);
-      setForm((f) => ({ ...f, hero_video: url }));
-    } catch {
-      setMessage("Échec de l'upload vidéo");
-    } finally {
-      setUploading(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -108,9 +77,13 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Hero */}
+        {/* Hero (texte) */}
         <section>
-          <h2 className="text-xl font-bold mb-4">Bannière d'accueil (hero)</h2>
+          <h2 className="text-xl font-bold mb-4">Bannière d'accueil (texte)</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Pour gérer les images et vidéos de la bannière, utilisez la page{' '}
+            <a href="/admin/hero" className="underline">Bannière hero</a>.
+          </p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">Titre</label>
@@ -146,43 +119,6 @@ export default function SettingsPage() {
                 <input name="hero_secondary_link" value={form.hero_secondary_link} onChange={handleChange}
                   className="w-full border rounded px-3 py-2 bg-transparent" />
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Image</label>
-              <input type="file" accept="image/*" onChange={handleHeroImage} disabled={uploading}
-                className="w-full text-sm" />
-              {uploading && <p className="text-xs text-gray-500 mt-1">Upload en cours...</p>}
-              {form.hero_image && (
-                <div className="mt-3">
-                  <img src={form.hero_image} alt="Hero" className="w-64 h-40 object-cover rounded border" />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, hero_image: '' }))}
-                    className="mt-2 text-sm text-red-500 hover:underline"
-                  >
-                    Supprimer l'image
-                  </button>
-                </div>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Vidéo (optionnelle — remplace l'image si définie)
-              </label>
-              <input type="file" accept="video/*" onChange={handleHeroVideo} disabled={uploading}
-                className="w-full text-sm" />
-              {form.hero_video && (
-                <div className="mt-3">
-                  <video src={form.hero_video} className="w-64 h-40 object-cover rounded border" muted />
-                  <button
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, hero_video: '' }))}
-                    className="mt-2 text-sm text-red-500 hover:underline"
-                  >
-                    Supprimer la vidéo
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </section>

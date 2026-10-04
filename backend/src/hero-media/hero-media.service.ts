@@ -16,9 +16,13 @@ export class HeroMediaService {
     });
   }
 
-  create(data: { type: string; url: string }) {
+  async create(data: { type: string; url: string }) {
+    const last = await this.prisma.heroMedia.findFirst({
+      orderBy: { position: 'desc' },
+    });
+    const position = last ? last.position + 1 : 0;
     return this.prisma.heroMedia.create({
-      data: { ...data, position: Date.now() },
+      data: { ...data, position },
     });
   }
 

@@ -12,7 +12,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @Controller('upload')
 export class UploadController {
-  constructor(private readonly uploadService: UploadService) {}
+  constructor(private readonly uploadService: UploadService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -31,4 +31,5 @@ export class UploadController {
     const url = await this.uploadService.uploadVideo(file);
     return { url };
   }
+
 }
