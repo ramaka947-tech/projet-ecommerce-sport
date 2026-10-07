@@ -4,8 +4,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Setting {
@@ -47,23 +48,26 @@ model Product {
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique
-  status          OrderStatus @default(NEW)
-  customerName    String
-  customerPhone   String
-  customerAddress String
-  city            String
-  comment         String?
-  subtotal        Float
-  deliveryFee     Float       @default(0)
-  total           Float
-  paymentMethod   String
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  items           OrderItem[]
-  customerId String?
-customer   Customer? @relation(fields: [customerId], references: [id])
+  id               String      @id @default(cuid())
+  orderNumber      String      @unique
+  status           OrderStatus @default(NEW)
+  customerName     String
+  customerPhone    String
+  customerAddress  String
+  city             String
+  comment          String?
+  subtotal         Float
+  deliveryFee      Float       @default(0)
+  total            Float
+  paymentMethod    String
+  paymentStatus    String      @default("PENDING")
+  amountPaid       Float       @default(0)
+  paymentReference String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  items            OrderItem[]
+  customerId       String?
+  customer         Customer?   @relation(fields: [customerId], references: [id])
 }
 
 model OrderItem {

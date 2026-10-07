@@ -6,12 +6,14 @@ import { Heart, ShoppingCart, User, Search } from 'lucide-react';
 import { getSettings } from '@/lib/api';
 import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { useCart } from '@/lib/cart-context';
+import { useFavorites } from '@/lib/favorites-context';
 
 export default function Header() {
   const [shopName, setShopName] = useState('SportPro');
   const [search, setSearch] = useState('');
   const { isLoggedIn } = useCustomerAuth();
-  const { items } = useCart();
+  const { count: cartCount } = useCart();
+  const { count: favCount } = useFavorites();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -31,15 +33,11 @@ export default function Header() {
     router.push(`/boutique?${params.toString()}`);
   };
 
-  const cartCount = items.reduce((sum, i) => sum + i.quantity, 0);
-
   return (
     <header className="hidden md:flex border-b px-6 py-4 items-center gap-4 bg-white">
       <Link href="/" className="text-2xl font-extrabold whitespace-nowrap">
         {shopName}
       </Link>
-
-      
 
       <form onSubmit={handleSearch} className="flex-1 max-w-md mx-auto">
         <div className="relative">
@@ -54,9 +52,18 @@ export default function Header() {
         </div>
       </form>
 
-      <button className="p-2 hover:bg-gray-100 rounded-full" title="Favoris">
+      <Link
+        href="/favoris"
+        className="relative p-2 hover:bg-gray-100 rounded-full"
+        title="Favoris"
+      >
         <Heart size={22} />
-      </button>
+        {favCount > 0 && (
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
+            {favCount}
+          </span>
+        )}
+      </Link>
 
       <Link
         href="/panier"
@@ -65,7 +72,7 @@ export default function Header() {
       >
         <ShoppingCart size={20} />
         {cartCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
             {cartCount}
           </span>
         )}

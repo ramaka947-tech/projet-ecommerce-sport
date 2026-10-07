@@ -28,7 +28,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     getSettings()
       .then((s) => setDeliveryFee(Number(s.delivery_fee) || 0))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -202,7 +202,7 @@ export default function CheckoutPage() {
           <h2 className="font-semibold mb-4">Récapitulatif</h2>
           {items.map((item) => (
             <div
-              key={item.productId}
+              key={item.id}
               className="flex justify-between text-sm mb-2"
             >
               <span>
