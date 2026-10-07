@@ -33,9 +33,14 @@ export class OrdersService {
       if (!product) {
         throw new BadRequestException(`Product ${item.productId} not found`);
       }
+      if (product.stock === 0) {
+        throw new BadRequestException(
+          `"${product.name}" est en rupture de stock.`,
+        );
+      }
       if (product.stock < item.quantity) {
         throw new BadRequestException(
-          `Insufficient stock for product ${product.name}`,
+          `Stock insuffisant pour "${product.name}" : ${product.stock} disponible(s), ${item.quantity} demandé(s).`,
         );
       }
       const unitPrice = product.promoPrice ?? product.price;
@@ -104,7 +109,34 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDto) {
-    await this.findOne(id);
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      include: { items: true },
+    });
+    if (!order) throw new NotFoundException(`Order ${id} not found`);
+
+    // Si on annule une commande qui n'était PAS déjà annulée,
+    // on remet le stock des produits.
+    if (dto.status === 'CANCELLED' && order.status !== 'CANCELLED') {
+      const restoreStockOps = order.items.map((item) =>
+        this.prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        }),
+      );
+
+      const [updated] = await this.prisma.$transaction([
+        this.prisma.order.update({
+          where: { id },
+          data: { status: dto.status },
+        }),
+        ...restoreStockOps,
+      ]);
+
+      return updated;
+    }
+
+    // Sinon : simple changement de statut sans toucher au stock
     return this.prisma.order.update({
       where: { id },
       data: { status: dto.status },

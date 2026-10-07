@@ -11,7 +11,7 @@ export default function AdminProductsPage() {
 
   const load = async () => {
     setLoading(true);
-    const data = await getProducts();
+    const data = await getProducts({ includeOutOfStock: 'true' });
     setProducts(data);
     setLoading(false);
   };
@@ -58,7 +58,13 @@ export default function AdminProductsPage() {
                 <td className="py-3">{p.name}</td>
                 <td className="py-3">{p.sku}</td>
                 <td className="py-3">{p.price} €</td>
-                <td className="py-3">{p.stock}</td>
+                <td className="py-3">
+                  {p.stock === 0 ? (
+                    <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded">Rupture</span>
+                  ) : (
+                    p.stock
+                  )}
+                </td>
                 <td className="py-3">{p.category?.name}</td>
                 <td className="py-3 text-right space-x-3">
                   <Link

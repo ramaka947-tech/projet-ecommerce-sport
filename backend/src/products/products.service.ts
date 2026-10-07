@@ -11,17 +11,28 @@ export class ProductsService {
     return this.prisma.product.create({ data: createProductDto });
   }
 
-  findAll(filters: {
+  async findAll(filters: {
     categoryId?: string;
     search?: string;
     sort?: string;
     minPrice?: string;
     maxPrice?: string;
     onSale?: string;
+    page?: string;
+    limit?: string;
+    paginated?: string;
+    includeOutOfStock?: string;
   } = {}) {
-    const { categoryId, search, sort, minPrice, maxPrice, onSale } = filters;
+    const {
+      categoryId, search, sort, minPrice, maxPrice, onSale,
+      page, limit, paginated, includeOutOfStock,
+    } = filters;
 
     const where: any = {};
+
+    if (includeOutOfStock !== 'true') {
+      where.stock = { gt: 0 };
+    }
 
     if (categoryId) where.categoryId = categoryId;
 
@@ -38,14 +49,38 @@ export class ProductsService {
       if (maxPrice) where.price.lte = Number(maxPrice);
     }
 
-    if (onSale === 'true') {
-      where.promoPrice = { not: null };
-    }
+    if (onSale === 'true') where.promoPrice = { not: null };
 
     let orderBy: any = { createdAt: 'desc' };
     if (sort === 'price_asc') orderBy = { price: 'asc' };
     else if (sort === 'price_desc') orderBy = { price: 'desc' };
 
+    // Mode paginé (utilisé par la boutique)
+    if (paginated === 'true') {
+      const pageNum = Math.max(1, Number(page) || 1);
+      const pageSize = Math.min(50, Math.max(1, Number(limit) || 12));
+
+      const [items, total] = await this.prisma.$transaction([
+        this.prisma.product.findMany({
+          where,
+          orderBy,
+          include: { category: true },
+          skip: (pageNum - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.product.count({ where }),
+      ]);
+
+      return {
+        items,
+        total,
+        page: pageNum,
+        pageSize,
+        totalPages: Math.ceil(total / pageSize),
+      };
+    }
+
+    // Mode classique (accueil, admin)
     return this.prisma.product.findMany({
       where,
       orderBy,
