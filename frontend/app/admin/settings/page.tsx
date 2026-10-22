@@ -5,7 +5,15 @@ import { getSettings, updateSettings } from '@/lib/api';
 export default function SettingsPage() {
   const [form, setForm] = useState({
     shop_name: '',
+    tagline: '',
+    contact_email: '',
+    contact_phone: '',
+    currency: 'FCFA',
     delivery_fee: '',
+    social_instagram: '',
+    social_facebook: '',
+    social_tiktok: '',
+    social_whatsapp: '',
     hero_title: '',
     hero_subtitle: '',
     hero_primary_label: '',
@@ -17,6 +25,7 @@ export default function SettingsPage() {
     promo_banner_subtitle: '',
     promo_banner_button_label: '',
     promo_banner_link: '',
+    shop_hero_image: '',
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,10 +79,125 @@ export default function SettingsPage() {
                 className="w-full border rounded px-3 py-2 bg-transparent" />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Frais de livraison</label>
-              <input name="delivery_fee" type="number" value={form.delivery_fee} onChange={handleChange}
+              <label className="block text-sm font-medium mb-1">Slogan (footer)</label>
+              <input name="tagline" value={form.tagline} onChange={handleChange}
                 className="w-full border rounded px-3 py-2 bg-transparent" />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Frais de livraison</label>
+                <input name="delivery_fee" type="number" value={form.delivery_fee} onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 bg-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Devise</label>
+                <input name="currency" value={form.currency} onChange={handleChange}
+                  placeholder="FCFA"
+                  className="w-full border rounded px-3 py-2 bg-transparent" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Contact */}
+        <section>
+          <h2 className="text-xl font-bold mb-4">Contact</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Affichés dans la barre du haut. Un champ vide n'est pas affiché.
+            L'adresse de la boutique (avec la carte) se gère dans la page{' '}
+            <a href="/admin/contact" className="underline">Contact</a>.
+          </p>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Email</label>
+                <input name="contact_email" type="email" value={form.contact_email} onChange={handleChange}
+                  className="w-full border rounded px-3 py-2 bg-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Téléphone</label>
+                <input name="contact_phone" value={form.contact_phone} onChange={handleChange}
+                  placeholder="+221 77 000 00 00"
+                  className="w-full border rounded px-3 py-2 bg-transparent" />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Réseaux sociaux */}
+        <section>
+          <h2 className="text-xl font-bold mb-4">Réseaux sociaux</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Les liens doivent commencer par https://. Laissez vide pour masquer un réseau.
+          </p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Instagram</label>
+              <input name="social_instagram" value={form.social_instagram} onChange={handleChange}
+                placeholder="https://instagram.com/..."
+                className="w-full border rounded px-3 py-2 bg-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Facebook</label>
+              <input name="social_facebook" value={form.social_facebook} onChange={handleChange}
+                placeholder="https://facebook.com/..."
+                className="w-full border rounded px-3 py-2 bg-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">TikTok</label>
+              <input name="social_tiktok" value={form.social_tiktok} onChange={handleChange}
+                placeholder="https://tiktok.com/@..."
+                className="w-full border rounded px-3 py-2 bg-transparent" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">WhatsApp (numéro)</label>
+              <input name="social_whatsapp" value={form.social_whatsapp} onChange={handleChange}
+                placeholder="+221 77 000 00 00"
+                className="w-full border rounded px-3 py-2 bg-transparent" />
+            </div>
+          </div>
+        </section>
+
+        {/* Bannière boutique */}
+        <section>
+          <h2 className="text-xl font-bold mb-4">Bannière de la boutique</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Image affichée en haut de la page /boutique.
+          </p>
+          <div>
+            <label className="block text-sm font-medium mb-1">Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const { uploadImage } = await import('@/lib/api');
+                  const url = await uploadImage(file);
+                  setForm((f) => ({ ...f, shop_hero_image: url }));
+                } catch {
+                  setMessage("Échec de l'upload");
+                }
+              }}
+              className="w-full text-sm"
+            />
+            {form.shop_hero_image && (
+              <div className="mt-3">
+                <img
+                  src={form.shop_hero_image.replace('/upload/', '/upload/q_100,w_2400/')}
+                  alt="Bannière boutique"
+                  className="w-64 h-40 object-cover rounded border"
+                />
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, shop_hero_image: '' }))}
+                  className="mt-2 text-sm text-red-500 hover:underline"
+                >
+                  Supprimer l'image
+                </button>
+              </div>
+            )}
           </div>
         </section>
 

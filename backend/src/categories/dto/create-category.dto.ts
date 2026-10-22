@@ -1,6 +1,6 @@
 export class CreateCategoryDto {
   name: string;
   description?: string;
-  image?: string;
+  imageUrl?: string;
   isActive?: boolean;
 }

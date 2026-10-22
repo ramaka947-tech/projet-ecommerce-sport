@@ -10,4 +10,11 @@ export class CreateProductDto {
   colors?: string[];
   isPublished?: boolean;
   categoryId: string;
+  isFeatured?: boolean;
+  brands?: string[];
+
+  shortDescription?: string | null;
+  highlights?: string[];
+  specs?: any[];
+  descriptionBanner?: string | null;
 }

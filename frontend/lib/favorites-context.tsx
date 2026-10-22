@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  SetStateAction,
+} from 'react';
 
 // On garde une copie du produit pour pouvoir l'afficher dans la page favoris
 export type FavoriteProduct = {
@@ -17,9 +24,11 @@ export type FavoriteProduct = {
 
 type FavoritesContextType = {
   favorites: FavoriteProduct[];
+  loaded: boolean; // true quand les favoris de l'appareil ont été relus
   isFavorite: (id: string) => boolean;
   toggleFavorite: (product: FavoriteProduct) => void;
   removeFavorite: (id: string) => void;
+  replaceFavorites: (next: SetStateAction<FavoriteProduct[]>) => void; // utilisé par la synchro
   count: number;
 };
 
@@ -74,7 +83,15 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 
   return (
     <FavoritesContext.Provider
-      value={{ favorites, isFavorite, toggleFavorite, removeFavorite, count: favorites.length }}
+      value={{
+        favorites,
+        loaded,
+        isFavorite,
+        toggleFavorite,
+        removeFavorite,
+        replaceFavorites: setFavorites,
+        count: favorites.length,
+      }}
     >
       {children}
     </FavoritesContext.Provider>

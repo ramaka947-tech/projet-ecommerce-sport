@@ -1,93 +1,85 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+const DELAY = 6000;
+
 export default function HeroCarousel({ media }: { media: any[] }) {
-    const [current, setCurrent] = useState(0);
-    const [paused, setPaused] = useState(false);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [current, setCurrent] = useState(0);
+  const [hovered, setHovered] = useState(false);
 
-    useEffect(() => {
-        if (media.length <= 1 || paused) return;
-        timerRef.current = setInterval(() => {
-            setCurrent((c) => (c + 1) % media.length);
-        }, 6000);
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [media.length, paused]);
+  // Le timer repart de zéro à chaque changement de slide (flèches et points inclus).
+  useEffect(() => {
+    if (media.length <= 1 || hovered) return;
+    const t = setTimeout(() => setCurrent((c) => (c + 1) % media.length), DELAY);
+    return () => clearTimeout(t);
+  }, [current, hovered, media.length]);
 
-    if (!media || media.length === 0) return null;
+  if (!media || media.length === 0) return null;
 
-    const item = media[current];
+  const item = media[current % media.length];
+  const prev = () => setCurrent((c) => (c - 1 + media.length) % media.length);
+  const next = () => setCurrent((c) => (c + 1) % media.length);
 
-    const prev = () => {
-        setPaused(true);
-        setCurrent((c) => (c - 1 + media.length) % media.length);
-    };
+  const transform =
+    item.type === 'video' ? '/upload/f_auto,q_auto/' : '/upload/f_auto,q_auto:best,w_2400,c_limit/';
+  const url = item.url.replace('/upload/', transform);
 
-    const next = () => {
-        setPaused(true);
-        setCurrent((c) => (c + 1) % media.length);
-    };
+  const arrow =
+    'absolute top-1/2 -translate-y-1/2 z-20 grid place-items-center size-11 rounded-full border border-white/40 bg-ink/40 text-white hover:bg-ink/70 transition focus-visible:outline-2 focus-visible:outline-action';
 
-    const goTo = (i: number) => {
-        setPaused(true);
-        setCurrent(i);
-    };
+  return (
+    <div
+      className="relative w-full h-full"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      role="region"
+      aria-roledescription="carrousel"
+      aria-label="Médias à la une"
+    >
+      {item.type === 'video' ? (
+        <video
+          key={item.id}
+          src={url}
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="hero-in absolute inset-0 w-full h-full object-cover object-center"
+        />
+      ) : (
+        <img
+          key={item.id}
+          src={url}
+          alt={item.alt || ''}
+          className="hero-in absolute inset-0 w-full h-full object-cover object-center"
+        />
+      )}
 
-    return (
+      {media.length > 1 && (
         <>
-            {item.type === 'video' ? (
-                <video
-                    key={item.id}
-                    src={item.url.replace('/upload/', '/upload/q_100/')}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    className="w-full h-full object-cover"
-                />
-            ) : (
-                <img
-                    key={item.id}
-                    src={item.url.replace('/upload/', '/upload/q_100,w_2400/')}
-                    alt=""
-                    className="w-full h-full object-cover"
-                />
-            )}
+          <button onClick={prev} className={`${arrow} left-4`} aria-label="Média précédent">
+            <ChevronLeft size={22} />
+          </button>
+          <button onClick={next} className={`${arrow} right-4`} aria-label="Média suivant">
+            <ChevronRight size={22} />
+          </button>
 
-            {media.length > 1 && (
-                <>
-                    <button
-                        onClick={prev}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 text-white p-3 rounded-full hover:bg-black/60 transition"
-                        aria-label="Précédent"
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-
-                    <button
-                        onClick={next}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 text-white p-3 rounded-full hover:bg-black/60 transition"
-                        aria-label="Suivant"
-                    >
-                        <ChevronRight size={24} />
-                    </button>
-
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                        {media.map((_, i) => (
-                            <button
-                                key={i}
-                                onClick={() => goTo(i)}
-                                className={`w-2.5 h-2.5 rounded-full transition ${i === current ? 'bg-white' : 'bg-white/50'
-                                    }`}
-                                aria-label={`Média ${i + 1}`}
-                            />
-                        ))}
-                    </div>
-                </>
-            )}
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+            {media.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                aria-label={`Média ${i + 1}`}
+                aria-current={i === current}
+                className={`h-2 rounded-full transition-all ${
+                  i === current ? 'w-6 bg-action' : 'w-2 bg-white/60 hover:bg-white'
+                }`}
+              />
+            ))}
+          </div>
         </>
-    );
+      )}
+    </div>
+  );
 }

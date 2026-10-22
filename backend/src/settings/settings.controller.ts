@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { SettingsService } from './settings.service.js';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @Controller('settings')
 export class SettingsController {
@@ -11,6 +12,7 @@ export class SettingsController {
   }
 
   @Put()
+  @UseGuards(JwtAuthGuard)
   update(@Body() body: Record<string, string>) {
     return this.settingsService.update(body);
   }

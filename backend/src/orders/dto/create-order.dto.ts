@@ -1,6 +1,8 @@
 export class OrderItemDto {
   productId: string;
   quantity: number;
+  size?: string;
+  color?: string;
 }
 
 export class CreateOrderDto {
@@ -12,5 +14,5 @@ export class CreateOrderDto {
   deliveryFee?: number;
   paymentMethod: string;
   customerId?: string;
-  items: { productId: string; quantity: number }[];
+  items: OrderItemDto[];
 }

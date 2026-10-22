@@ -12,9 +12,12 @@ import { UploadModule } from './upload/upload.module.js';
 import { AttributesModule } from './attributes/attributes.module.js';
 import { CustomersModule } from './customers/customers.module.js';
 import { HeroMediaModule } from './hero-media/hero-media.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
+import { PaymentMethodsModule } from './payment-methods/payment-methods.module.js';
+import { MessagesModule } from './messages/messages.module.js';
 
 @Module({
-  imports: [SettingsModule, PrismaModule, CategoriesModule, ProductsModule, OrdersModule, AuthModule, StatsModule, UploadModule, AttributesModule, CustomersModule, HeroMediaModule],
+  imports: [SettingsModule, PrismaModule, CategoriesModule, ProductsModule, OrdersModule, AuthModule, StatsModule, UploadModule, AttributesModule, CustomersModule, HeroMediaModule, ReviewsModule, PaymentMethodsModule, MessagesModule],
   controllers: [AppController],
   providers: [AppService],
 })
