@@ -23,6 +23,16 @@ export class OrdersController {
     return this.ordersService.create(createOrderDto);
   }
 
+    @Post('track')
+  track(@Body() body: { orderNumber: string; phone: string }) {
+    return this.ordersService.track(body.orderNumber, body.phone);
+  }
+
+  @Post('track/cancel')
+  cancelTracked(@Body() body: { orderNumber: string; phone: string }) {
+    return this.ordersService.cancelTracked(body.orderNumber, body.phone);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   findAll() {

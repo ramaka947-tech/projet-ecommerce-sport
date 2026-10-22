@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard.js';
 
 @Controller()
 export class AttributesController {
-  constructor(private readonly attributesService: AttributesService) {}
+  constructor(private readonly attributesService: AttributesService) { }
 
   // Sizes
   @Get('sizes')
@@ -34,13 +34,31 @@ export class AttributesController {
 
   @Post('colors')
   @UseGuards(JwtAuthGuard)
-  createColor(@Body() body: { name: string }) {
-    return this.attributesService.createColor(body.name);
+  createColor(@Body() body: { name: string; hex?: string }) {
+    return this.attributesService.createColor(body.name, body.hex);
   }
 
   @Delete('colors/:id')
   @UseGuards(JwtAuthGuard)
   removeColor(@Param('id') id: string) {
     return this.attributesService.removeColor(id);
+  }
+
+  // Brands
+  @Get('brands')
+  findAllBrands() {
+    return this.attributesService.findAllBrands();
+  }
+
+  @Post('brands')
+  @UseGuards(JwtAuthGuard)
+  createBrand(@Body() body: { name: string }) {
+    return this.attributesService.createBrand(body.name);
+  }
+
+  @Delete('brands/:id')
+  @UseGuards(JwtAuthGuard)
+  removeBrand(@Param('id') id: string) {
+    return this.attributesService.removeBrand(id);
   }
 }

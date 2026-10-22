@@ -1,24 +1,27 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Heart, ShoppingCart, User, Search } from 'lucide-react';
 import { getSettings } from '@/lib/api';
-import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 
 export default function Header() {
   const [shopName, setShopName] = useState('SportPro');
   const [search, setSearch] = useState('');
-  const { isLoggedIn } = useCustomerAuth();
   const { count: cartCount } = useCart();
   const { count: favCount } = useFavorites();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    getSettings().then((s) => s.shop_name && setShopName(s.shop_name)).catch(() => { });
+    getSettings()
+      .then((s) => {
+        if (s.shop_name) setShopName(s.shop_name);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -33,58 +36,74 @@ export default function Header() {
     router.push(`/boutique?${params.toString()}`);
   };
 
+  const nav = [
+    { label: 'Accueil', href: '/', active: pathname === '/' },
+    { label: 'Boutique', href: '/boutique', active: pathname.startsWith('/boutique') },
+  ];
+
+  const iconBtn =
+    'relative p-2.5 rounded-full text-white hover:bg-white/10 transition';
+  const badge =
+    'absolute top-0 right-0 bg-action text-white text-[10px] font-bold rounded-full min-w-4 h-4 px-1 flex items-center justify-center';
+
   return (
-    <header className="hidden md:flex border-b px-6 py-4 items-center gap-4 bg-white">
-      <Link href="/" className="text-2xl font-extrabold whitespace-nowrap">
-        {shopName}
-      </Link>
+    <header className="hidden md:block sticky top-0 z-40 bg-ink text-white">
+      {/* Ligne 1 : logo + recherche + icônes */}
+      <div className="max-w-7xl mx-auto px-6 pt-4 flex items-center gap-6">
+        <Link href="/" className="flex items-center gap-2 shrink-0" aria-label={shopName}>
+          <img src="/logo.png" alt="" className="h-9 w-auto" />
+          <span className="text-2xl font-extrabold tracking-tight">{shopName}</span>
+        </Link>
 
-      <form onSubmit={handleSearch} className="flex-1 max-w-md mx-auto">
-        <div className="relative">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un produit..."
-            className="w-full border rounded-full pl-10 pr-4 py-2 text-sm bg-gray-100 border-transparent focus:bg-white focus:border-gray-300 outline-none"
-          />
+        <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-auto" role="search">
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-ink/50"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un produit, une catégorie…"
+              aria-label="Rechercher"
+              className="w-full rounded-full pl-10 pr-4 py-2.5 text-sm bg-white text-ink placeholder:text-ink/50 outline-none focus-visible:ring-2 focus-visible:ring-action"
+            />
+          </div>
+        </form>
+
+        <div className="flex items-center gap-1">
+          <Link href="/favoris" className={iconBtn} title="Favoris" aria-label="Favoris">
+            <Heart size={22} />
+            {favCount > 0 && <span className={badge}>{favCount}</span>}
+          </Link>
+          <Link href="/panier" className={iconBtn} title="Panier" aria-label="Panier">
+            <ShoppingCart size={22} />
+            {cartCount > 0 && <span className={badge}>{cartCount}</span>}
+          </Link>
+          <Link href="/mon-compte" className={iconBtn} title="Mon compte" aria-label="Mon compte">
+            <User size={22} />
+          </Link>
         </div>
-      </form>
+      </div>
 
-      <Link
-        href="/favoris"
-        className="relative p-2 hover:bg-gray-100 rounded-full"
-        title="Favoris"
-      >
-        <Heart size={22} />
-        {favCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-            {favCount}
-          </span>
-        )}
-      </Link>
-
-      <Link
-        href="/panier"
-        className="relative p-2 hover:bg-gray-100 rounded-full"
-        title="Panier"
-      >
-        <ShoppingCart size={20} />
-        {cartCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full min-w-4 h-4 px-1 flex items-center justify-center">
-            {cartCount}
-          </span>
-        )}
-      </Link>
-
-      <Link
-        href={isLoggedIn ? '/mon-compte' : '/compte/connexion'}
-        className="p-2 hover:bg-gray-100 rounded-full"
-        title="Compte"
-      >
-        <User size={22} />
-      </Link>
+      {/* Ligne 2 : nav CENTRÉE */}
+      <nav className="max-w-7xl mx-auto px-6 mt-1 flex items-center justify-center gap-10">
+        {nav.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={item.active ? 'page' : undefined}
+            className={`whitespace-nowrap py-3 text-sm font-semibold border-b-2 transition ${
+              item.active
+                ? 'border-action text-white'
+                : 'border-transparent text-white/70 hover:text-white'
+            }`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </header>
   );
 }

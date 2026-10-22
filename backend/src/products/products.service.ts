@@ -11,6 +11,19 @@ export class ProductsService {
     return this.prisma.product.create({ data: createProductDto });
   }
 
+  private computeRating(product: any) {
+    const reviews = product.reviews || [];
+    const count = reviews.length;
+    const average = count > 0
+      ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / count
+      : 0;
+    return {
+      ...product,
+      ratingAverage: Math.round(average * 10) / 10,
+      ratingCount: count,
+    };
+  }
+
   async findAll(filters: {
     categoryId?: string;
     search?: string;
@@ -22,10 +35,14 @@ export class ProductsService {
     limit?: string;
     paginated?: string;
     includeOutOfStock?: string;
+    sizes?: string;
+    colors?: string;
+    brand?: string;
   } = {}) {
     const {
       categoryId, search, sort, minPrice, maxPrice, onSale,
       page, limit, paginated, includeOutOfStock,
+      sizes, colors, brand,
     } = filters;
 
     const where: any = {};
@@ -51,11 +68,30 @@ export class ProductsService {
 
     if (onSale === 'true') where.promoPrice = { not: null };
 
+    if (sizes) {
+      where.sizes = { hasSome: sizes.split(',').map((s) => s.trim()) };
+    }
+
+    if (colors) {
+      where.colors = { hasSome: colors.split(',').map((c) => c.trim()) };
+    }
+
+    if (brand) {
+      where.brands = { hasSome: brand.split(',').map((b) => b.trim()) };
+    }
+
     let orderBy: any = { createdAt: 'desc' };
     if (sort === 'price_asc') orderBy = { price: 'asc' };
     else if (sort === 'price_desc') orderBy = { price: 'desc' };
 
-    // Mode paginé (utilisé par la boutique)
+    const include = {
+      category: true,
+      reviews: {
+        where: { isApproved: true },
+        select: { rating: true },
+      },
+    };
+
     if (paginated === 'true') {
       const pageNum = Math.max(1, Number(page) || 1);
       const pageSize = Math.min(50, Math.max(1, Number(limit) || 12));
@@ -64,7 +100,7 @@ export class ProductsService {
         this.prisma.product.findMany({
           where,
           orderBy,
-          include: { category: true },
+          include,
           skip: (pageNum - 1) * pageSize,
           take: pageSize,
         }),
@@ -72,7 +108,7 @@ export class ProductsService {
       ]);
 
       return {
-        items,
+        items: items.map((p) => this.computeRating(p)),
         total,
         page: pageNum,
         pageSize,
@@ -80,12 +116,13 @@ export class ProductsService {
       };
     }
 
-    // Mode classique (accueil, admin)
-    return this.prisma.product.findMany({
+    const items = await this.prisma.product.findMany({
       where,
       orderBy,
-      include: { category: true },
+      include,
     });
+
+    return items.map((p) => this.computeRating(p));
   }
 
   async findOne(id: string) {

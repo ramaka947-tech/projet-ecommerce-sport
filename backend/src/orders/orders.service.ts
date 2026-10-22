@@ -49,8 +49,19 @@ export class OrdersService {
         productId: product.id,
         quantity: item.quantity,
         unitPrice,
+        size: item.size ?? null,
+        color: item.color ?? null,
+        productName: product.name,
+        productImage: product.images[0] ?? null,
       };
     });
+
+    const pm = await this.prisma.paymentMethod.findFirst({
+      where: { name: createOrderDto.paymentMethod, isActive: true },
+    });
+    if (!pm) {
+      throw new BadRequestException('Moyen de paiement invalide ou désactivé.');
+    }
 
     const total = subtotal + deliveryFee;
 
@@ -63,6 +74,7 @@ export class OrdersService {
         deliveryFee,
         total,
         items: { create: orderItemsData },
+        history: { create: { status: OrderStatus.NEW } },
       },
       include: { items: { include: { product: true } } },
     });
@@ -74,17 +86,95 @@ export class OrdersService {
       }),
     );
 
-    const [order] = await this.prisma.$transaction([
-      createOrderOp,
-      ...decrementStockOps,
-    ]);
+    // --- NOUVEAU : On prépare la mise à jour du panier en base (si client connecté) ---
+    const operations: any[] = [createOrderOp, ...decrementStockOps];
+    
+    if (customerId) {
+      operations.push(
+        this.prisma.customer.update({
+          where: { id: customerId },
+          data: { cart: [] }, // On vide le panier sauvegardé
+        })
+      );
+    }
+
+    // On exécute toutes les opérations en une seule transaction
+    const results = await this.prisma.$transaction(operations);
+    const order = results[0]; // La première opération est toujours la création de la commande
 
     return order;
   }
 
+  // Compare deux numéros en ignorant espaces, +, indicatif
+  private samePhone(a: string, b: string): boolean {
+    const x = (a || '').replace(/\D/g, '');
+    const y = (b || '').replace(/\D/g, '');
+    if (x.length < 8 || y.length < 8) return false;
+    return x.endsWith(y) || y.endsWith(x);
+  }
+
+  private async findTracked(orderNumber: string, phone: string) {
+    if (!orderNumber?.trim() || !phone?.trim()) {
+      throw new BadRequestException('Numéro de commande et téléphone requis.');
+    }
+    const raw = orderNumber.trim().toUpperCase();
+    const number = /^\d+$/.test(raw) ? `CMD-${raw}` : raw;
+
+    const order = await this.prisma.order.findUnique({
+      where: { orderNumber: number },
+      include: {
+        items: { include: { product: { select: { name: true, images: true } } } },
+        history: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+
+    // Même message dans les deux cas : on ne révèle pas si le numéro existe
+    if (!order || !this.samePhone(order.customerPhone, phone)) {
+      throw new NotFoundException('Commande introuvable. Vérifiez le numéro et le téléphone.');
+    }
+    return order;
+  }
+
+  track(orderNumber: string, phone: string) {
+    return this.findTracked(orderNumber, phone);
+  }
+
+  async cancelTracked(orderNumber: string, phone: string) {
+    const order = await this.findTracked(orderNumber, phone);
+
+    if (order.status !== OrderStatus.NEW) {
+      throw new BadRequestException(
+        'Cette commande ne peut plus être annulée en ligne. Contactez-nous sur WhatsApp.',
+      );
+    }
+
+    const restoreStockOps = order.items.map((item) =>
+      this.prisma.product.update({
+        where: { id: item.productId },
+        data: { stock: { increment: item.quantity } },
+      }),
+    );
+
+    await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: OrderStatus.CANCELLED,
+          history: { create: { status: OrderStatus.CANCELLED } },
+        },
+      }),
+      ...restoreStockOps,
+    ]);
+
+    return this.findTracked(orderNumber, phone);
+  }
+
   findAll() {
     return this.prisma.order.findMany({
-      include: { items: { include: { product: true } } },
+      include: {
+        items: { include: { product: true } },
+        history: { orderBy: { createdAt: 'asc' } },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -115,32 +205,30 @@ export class OrdersService {
     });
     if (!order) throw new NotFoundException(`Order ${id} not found`);
 
-    // Si on annule une commande qui n'était PAS déjà annulée,
-    // on remet le stock des produits.
-    if (dto.status === 'CANCELLED' && order.status !== 'CANCELLED') {
+    // Même statut : rien à faire (évite les doublons dans l'historique)
+    if (order.status === dto.status) return order;
+
+    const updateOp = this.prisma.order.update({
+      where: { id },
+      data: {
+        status: dto.status,
+        history: { create: { status: dto.status } },
+      },
+    });
+
+    // Annulation : on remet le stock des produits
+    if (dto.status === 'CANCELLED') {
       const restoreStockOps = order.items.map((item) =>
         this.prisma.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
         }),
       );
-
-      const [updated] = await this.prisma.$transaction([
-        this.prisma.order.update({
-          where: { id },
-          data: { status: dto.status },
-        }),
-        ...restoreStockOps,
-      ]);
-
+      const [updated] = await this.prisma.$transaction([updateOp, ...restoreStockOps]);
       return updated;
     }
 
-    // Sinon : simple changement de statut sans toucher au stock
-    return this.prisma.order.update({
-      where: { id },
-      data: { status: dto.status },
-    });
+    return updateOp;
   }
 
   async remove(id: string) {

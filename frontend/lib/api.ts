@@ -37,7 +37,7 @@ export async function createOrder(orderData: {
   paymentMethod: string;
   deliveryFee?: number;
   customerId?: string;
-  items: { productId: string; quantity: number }[];
+    items: { productId: string; quantity: number; size?: string; color?: string }[];
 }) {
   const res = await fetch(`${API_URL}/orders`, {
     method: 'POST',
@@ -162,7 +162,12 @@ export async function updateSettings(data: Record<string, string>) {
     headers: authHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update settings');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      Array.isArray(err.message) ? err.message.join(', ') : err.message || 'Failed to update settings',
+    );
+  }
   return res.json();
 }
 
@@ -220,11 +225,11 @@ export async function getColors() {
   return res.json();
 }
 
-export async function createColor(name: string) {
+export async function createColor(name: string, hex?: string) {
   const res = await fetch(`${API_URL}/colors`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, hex }),
   });
   if (!res.ok) throw new Error('Failed to create color');
   return res.json();
@@ -241,7 +246,7 @@ export async function deleteColor(id: string) {
 
 export async function registerCustomer(data: {
   name: string; email: string; password: string; phone: string;
-  country?: string; region?: string; district?: string;
+  country?: string; region?: string; district?: string; address?: string;
 }) {
   const res = await fetch(`${API_URL}/customer-auth/register`, {
     method: 'POST',
@@ -275,6 +280,30 @@ export async function getMeCustomer() {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch customer');
+  return res.json();
+}
+
+export async function updateMyProfile(data: {
+  name?: string;
+  phone?: string;
+  region?: string;
+  address?: string;
+}) {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/me`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(
+      Array.isArray(err.message) ? err.message.join(', ') : err.message || "Impossible d'enregistrer",
+    );
+  }
   return res.json();
 }
 
@@ -346,3 +375,292 @@ export async function uploadVideo(file: File): Promise<string> {
   const data = await res.json();
   return data.url;
 }
+
+// ---- Reviews ----
+export async function getProductReviews(productId: string) {
+  const res = await fetch(`${API_URL}/reviews/product/${productId}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch reviews');
+  return res.json();
+}
+
+export async function createReview(data: {
+  productId: string;
+  rating: number;
+  comment?: string;
+  customerPhone: string;
+}) {
+  const res = await fetch(`${API_URL}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to create review');
+  }
+  return res.json();
+}
+
+export async function getReviewsAdmin() {
+  const res = await fetch(`${API_URL}/reviews`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch reviews');
+  return res.json();
+}
+
+export async function approveReview(id: string) {
+  const res = await fetch(`${API_URL}/reviews/${id}/approve`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to approve review');
+  return res.json();
+}
+
+export async function deleteReview(id: string) {
+  const res = await fetch(`${API_URL}/reviews/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete review');
+  return res.json();
+}
+
+// ---- Payment methods ----
+export async function getPaymentMethods() {
+  const res = await fetch(`${API_URL}/payment-methods`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch payment methods');
+  return res.json();
+}
+
+export async function getAllPaymentMethods() {
+  const res = await fetch(`${API_URL}/payment-methods/all`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch payment methods');
+  return res.json();
+}
+
+export async function createPaymentMethod(data: {
+  name: string;
+  instructions?: string;
+  isActive?: boolean;
+  position?: number;
+}) {
+  const res = await fetch(`${API_URL}/payment-methods`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to create payment method');
+  return res.json();
+}
+
+export async function updatePaymentMethod(
+  id: string,
+  data: { name?: string; instructions?: string; isActive?: boolean; position?: number },
+) {
+  const res = await fetch(`${API_URL}/payment-methods/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update payment method');
+  return res.json();
+}
+
+export async function deletePaymentMethod(id: string) {
+  const res = await fetch(`${API_URL}/payment-methods/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete payment method');
+  return res.json();
+}
+
+// ---- Suivi de commande (côté client connecté) ----
+export async function getMyOrder(id: string) {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/orders/${id}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Commande introuvable');
+  return res.json();
+}
+
+export async function cancelMyOrder(id: string) {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/orders/${id}/cancel`, {
+    method: 'PATCH',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Impossible d'annuler la commande");
+  }
+  return res.json();
+}
+
+// ---- Suivi public (sans compte) ----
+export async function trackOrder(orderNumber: string, phone: string) {
+  const res = await fetch(`${API_URL}/orders/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderNumber, phone }),
+    cache: 'no-store',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Commande introuvable');
+  }
+  return res.json();
+}
+
+export async function cancelTrackedOrder(orderNumber: string, phone: string) {
+  const res = await fetch(`${API_URL}/orders/track/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderNumber, phone }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || "Impossible d'annuler la commande");
+  }
+  return res.json();
+}
+
+// ---- Panier + favoris enregistrés (client connecté) ----
+export async function getSavedData() {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/saved`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch saved data');
+  return res.json();
+}
+
+export async function saveSavedData(data: { cart?: any[]; favorites?: any[] }) {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/saved`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to save data');
+  return res.json();
+}
+
+export async function getBrands() {
+  const res = await fetch(`${API_URL}/brands`, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch brands');
+  return res.json();
+}
+
+export async function createBrand(name: string) {
+  const res = await fetch(`${API_URL}/brands`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) throw new Error('Failed to create brand');
+  return res.json();
+}
+
+export async function deleteBrand(id: string) {
+  const res = await fetch(`${API_URL}/brands/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete brand');
+  return res.json();
+}
+
+// ---- Messages Contact ----
+
+export async function getAdminMessages() {
+  const res = await fetch(`${API_URL}/messages`, {
+    headers: authHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch messages');
+  return res.json();
+}
+
+export async function markMessageAsRead(id: string) {
+  const res = await fetch(`${API_URL}/messages/${id}/read`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to update message');
+  return res.json();
+}
+
+export async function deleteMessage(id: string) {
+  const res = await fetch(`${API_URL}/messages/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to delete message');
+  return res.json();
+}
+
+export async function replyMessage(id: string, reply: string) {
+  const res = await fetch(`${API_URL}/messages/${id}/reply`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ reply }),
+  });
+  if (!res.ok) throw new Error('Failed to reply');
+  return res.json();
+}
+
+export async function sendContactMessage(data: {
+  name: string;
+  email: string;
+  subject?: string;
+  content: string;
+  customerId?: string; // <-- Ajoute cette ligne
+}) {
+  const res = await fetch(`${API_URL}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Échec de l'envoi du message");
+  return res.json();
+}
+
+export async function getMyMessages() {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/messages`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch messages');
+  return res.json();
+}
+
+export async function addMyMessageEntry(messageId: string, content: string) {
+  const token = localStorage.getItem('customer_token');
+  const res = await fetch(`${API_URL}/customer-auth/messages/${messageId}/entries`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error('Envoi impossible');
+  return res.json();
+}
+

@@ -7,6 +7,7 @@ type Ctx = {
   isLoggedIn: boolean;
   login: (token: string, customer: any) => void;
   logout: () => void;
+  updateCustomer: (customer: any) => void; // AJOUT : met à jour les infos affichées
 };
 
 const CustomerAuthContext = createContext<Ctx | null>(null);
@@ -28,12 +29,21 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     setCustomer(null);
   };
 
+  // AJOUT : après une modification du profil, on garde le même token
+  // et on remplace seulement les infos du client (mémoire + localStorage)
+  const updateCustomer = (cust: any) => {
+    const token = getCustomerToken();
+    if (token) setCustomerSession(token, cust);
+    setCustomer(cust);
+  };
+
   return (
     <CustomerAuthContext.Provider value={{
       customer,
       isLoggedIn: !!customer,
       login,
       logout,
+      updateCustomer,
     }}>
       {children}
     </CustomerAuthContext.Provider>

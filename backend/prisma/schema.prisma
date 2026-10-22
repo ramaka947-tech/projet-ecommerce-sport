@@ -11,7 +11,7 @@ datasource db {
 
 model Setting {
   id        String   @id @default(cuid())
-  key       String   @unique
+  key       String   @unique 
   value     String
   type      String   @default("string")
   updatedAt DateTime @updatedAt
@@ -21,10 +21,10 @@ model Category {
   id          String    @id @default(cuid())
   name        String
   description String?
-  image       String?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  imageUrl    String?
   products    Product[]
 }
 
@@ -39,12 +39,19 @@ model Product {
   images      String[]
   sizes       String[]
   colors      String[]
+  brands      String[]
   isPublished Boolean     @default(true)
+  isFeatured  Boolean     @default(false)
   categoryId  String
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   orderItems  OrderItem[]
   category    Category    @relation(fields: [categoryId], references: [id])
+  reviews     Review[]
+  shortDescription  String?
+  highlights        String[]  @default([])
+  specs             Json?
+  descriptionBanner String?
 }
 
 model Order {
@@ -60,33 +67,37 @@ model Order {
   deliveryFee      Float       @default(0)
   total            Float
   paymentMethod    String
-  paymentStatus    String      @default("PENDING")
-  amountPaid       Float       @default(0)
-  paymentReference String?
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt
-  items            OrderItem[]
   customerId       String?
+  amountPaid       Float       @default(0)
+  paymentReference String?
+  paymentStatus    String      @default("PENDING")
   customer         Customer?   @relation(fields: [customerId], references: [id])
+  items            OrderItem[]
+  history          OrderStatusHistory[]
 }
 
 model OrderItem {
-  id        String  @id @default(cuid())
-  quantity  Int
-  unitPrice Float
-  orderId   String
-  productId String
-  order     Order   @relation(fields: [orderId], references: [id])
-  product   Product @relation(fields: [productId], references: [id])
+  id           String  @id @default(cuid())
+  quantity     Int
+  unitPrice    Float
+  size         String?
+  color        String?
+  productName  String?
+  productImage String?
+  orderId      String
+  productId    String
+  order        Order   @relation(fields: [orderId], references: [id])
+  product      Product @relation(fields: [productId], references: [id])
 }
 
-enum OrderStatus {
-  NEW
-  CONFIRMED
-  PREPARING
-  TO_DELIVER
-  DELIVERED
-  CANCELLED
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }
 
 model Admin {
@@ -94,7 +105,6 @@ model Admin {
   email     String   @unique
   password  String
   name      String?
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -108,6 +118,7 @@ model Size {
 model Color {
   id        String   @id @default(cuid())
   name      String   @unique
+  hex       String?
   createdAt DateTime @default(now())
 }
 
@@ -123,13 +134,76 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+  cart      Json?
+  favorites Json?
+  address String?
 }
 
 model HeroMedia {
   id        String   @id @default(cuid())
-  type      String   // "image" ou "video"
+  type      String
   url       String
   position  Int      @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+}
+
+model Review {
+  id            String   @id @default(cuid())
+  rating        Int
+  comment       String?
+  authorName    String
+  productId     String
+  isApproved    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  customerPhone String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  PREPARING
+  TO_DELIVER
+  DELIVERED
+  CANCELLED
+}
+
+model PaymentMethod {
+  id           String   @id @default(cuid())
+  name         String
+  instructions String?
+  isActive     Boolean  @default(true)
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  subject    String?
+  content    String
+  reply      String?  // La réponse de l'admin
+  isRead     Boolean  @default(false)
+  customerId String?  // Lien vers le client si connecté
+  createdAt  DateTime @default(now())
+  entries    MessageEntry[]
+}
+
+model MessageEntry {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  author    String   // "CUSTOMER" ou "ADMIN"
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
 }

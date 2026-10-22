@@ -1,6 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  SetStateAction,
+} from 'react';
 
 export type CartItem = {
   id: string; // identifiant de la ligne (produit + couleur + taille + note)
@@ -19,10 +26,12 @@ type AddInput = Omit<CartItem, 'id' | 'quantity'> & { quantity?: number };
 
 type CartContextType = {
   items: CartItem[];
+  loaded: boolean; // true quand le panier de l'appareil a été relu
   addItem: (input: AddInput) => void;
   updateQuantity: (id: string, quantity: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
+  replaceItems: (next: SetStateAction<CartItem[]>) => void; // utilisé par la synchro
   subtotal: number;
   count: number;
 };
@@ -85,7 +94,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, updateQuantity, removeItem, clearCart, subtotal, count }}
+      value={{
+        items,
+        loaded,
+        addItem,
+        updateQuantity,
+        removeItem,
+        clearCart,
+        replaceItems: setItems,
+        subtotal,
+        count,
+      }}
     >
       {children}
     </CartContext.Provider>

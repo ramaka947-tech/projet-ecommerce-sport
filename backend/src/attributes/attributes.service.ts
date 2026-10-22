@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class AttributesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // Sizes
   findAllSizes() {
@@ -25,13 +25,28 @@ export class AttributesService {
     return this.prisma.color.findMany({ orderBy: { name: 'asc' } });
   }
 
-  createColor(name: string) {
-    return this.prisma.color.create({ data: { name } });
+  createColor(name: string, hex?: string) {
+    return this.prisma.color.create({ data: { name, hex } });
   }
 
   async removeColor(id: string) {
     const color = await this.prisma.color.findUnique({ where: { id } });
     if (!color) throw new NotFoundException(`Color ${id} not found`);
     return this.prisma.color.delete({ where: { id } });
+  }
+
+  // Brands
+  findAllBrands() {
+    return this.prisma.brand.findMany({ orderBy: { name: 'asc' } });
+  }
+
+  createBrand(name: string) {
+    return this.prisma.brand.create({ data: { name } });
+  }
+
+  async removeBrand(id: string) {
+    const brand = await this.prisma.brand.findUnique({ where: { id } });
+    if (!brand) throw new NotFoundException(`Brand ${id} not found`);
+    return this.prisma.brand.delete({ where: { id } });
   }
 }
