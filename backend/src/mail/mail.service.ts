@@ -29,6 +29,9 @@ export class MailService {
       port,
       secure: port === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === 'production',
+      },
     });
     return this.transporter;
   }
@@ -98,4 +101,109 @@ export class MailService {
       this.logger.error(`Échec d'envoi de l'email de bienvenue : ${err?.message || err}`);
     }
   }
+
+  // Ne lève jamais d'erreur : un email raté ne doit pas empêcher la création du compte
+    async sendAdminWelcome(to: string, name: string, password: string): Promise<boolean> {
+    try {
+      const transporter = this.getTransporter();
+      if (!transporter) {
+        this.logger.warn("SMTP non configuré : l'email admin n'est pas envoyé.");
+        return false;
+      }
+
+      const shop = await this.shopName();
+      const siteUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const loginUrl = `${siteUrl}/admin/login`;
+      const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
+      const first = (name || '').trim().split(/\s+/)[0] || '';
+
+      // ⚠️ Remplace ces couleurs par celles de ton design
+      const C = {
+        ink: '#111111',
+        action: '#E11D2E',
+        canvas: '#F5F5F3',
+        line: '#E7E7E4',
+        muted: '#6B6B6B',
+      };
+
+      // "SportPro" -> "Sport" en blanc + "Pro" en rouge
+      const m = shop.match(/^(.+?)(Pro)$/i);
+      const brand = m
+        ? `<span style="color:#ffffff">${escapeHtml(m[1])}</span><span style="color:${C.action}">${escapeHtml(m[2])}</span>`
+        : `<span style="color:#ffffff">${escapeHtml(shop)}</span>`;
+
+      const text = [
+        `Bonjour ${first},`,
+        '',
+        `Un compte administrateur ${shop} vient d'être créé pour vous.`,
+        '',
+        `Email : ${to}`,
+        `Mot de passe : ${password}`,
+        '',
+        `Se connecter : ${loginUrl}`,
+      ].join('\n');
+
+      const html = `
+<!DOCTYPE html>
+<html lang="fr">
+<body style="margin:0;padding:0;background:${C.canvas};font-family:Arial,Helvetica,sans-serif;color:${C.ink}">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.canvas};padding:32px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid ${C.line};border-radius:16px;overflow:hidden">
+
+        <tr><td align="center" style="background:${C.ink};padding:24px">
+          <span style="font-size:24px;font-weight:800;letter-spacing:1px">${brand}</span>
+        </td></tr>
+        <tr><td style="height:4px;background:${C.action};line-height:4px;font-size:4px">&nbsp;</td></tr>
+
+        <tr><td style="padding:32px 32px 8px">
+          <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:${C.ink}">Bienvenue${first ? ', ' + escapeHtml(first) : ''}</h1>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:${C.ink}">
+            Un compte administrateur <b>${escapeHtml(shop)}</b> vient d'être créé pour vous.
+            Voici vos identifiants de connexion :
+          </p>
+        </td></tr>
+
+        <tr><td style="padding:16px 32px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.canvas};border:1px solid ${C.line};border-radius:12px">
+            <tr><td style="padding:16px 18px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:${C.muted};margin-bottom:4px">Adresse email</div>
+              <div style="font-size:15px;font-weight:bold;color:${C.ink}">${escapeHtml(to)}</div>
+            </td></tr>
+            <tr><td style="padding:0 18px"><div style="border-top:1px solid ${C.line}"></div></td></tr>
+            <tr><td style="padding:16px 18px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:${C.muted};margin-bottom:4px">Mot de passe</div>
+              <div style="font-size:16px;font-weight:bold;font-family:Consolas,Menlo,monospace;color:${C.ink}">${escapeHtml(password)}</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td align="center" style="padding:8px 32px 32px">
+          <a href="${loginUrl}" style="display:inline-block;background:${C.action};color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 32px;border-radius:10px">Se connecter à l'administration</a>
+        </td></tr>
+
+        <tr><td style="background:${C.canvas};border-top:1px solid ${C.line};padding:18px 32px;text-align:center;font-size:12px;color:${C.muted}">
+          © ${new Date().getFullYear()} ${escapeHtml(shop)}
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+      await transporter.sendMail({
+        from,
+        to,
+        subject: `Votre accès administrateur ${shop}`,
+        text,
+        html,
+      });
+      return true;
+    } catch (err: any) {
+      this.logger.error(`Échec d'envoi de l'email admin : ${err?.message || err}`);
+      return false;
+    }
+  }
 }
+

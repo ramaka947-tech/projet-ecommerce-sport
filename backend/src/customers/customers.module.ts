@@ -4,11 +4,11 @@ import { CustomersController } from './customers.controller.js';
 import { CustomersService } from './customers.service.js';
 import { CustomerJwtStrategy } from './customer-auth.guard.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
-import { MailService } from '../mail/mail.service.js';
+import { MailModule } from '../mail/mail.module.js';
 
 @Module({
-  imports: [PrismaModule, JwtModule.register({})],
+  imports: [PrismaModule, MailModule, JwtModule.register({})],
   controllers: [CustomersController],
-  providers: [CustomersService, CustomerJwtStrategy, MailService],
+  providers: [CustomersService, CustomerJwtStrategy],
 })
 export class CustomersModule {}

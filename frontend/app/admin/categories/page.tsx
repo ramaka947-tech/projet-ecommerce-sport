@@ -3,33 +3,22 @@
 import { useEffect, useState } from 'react';
 import AdminGuard from '@/lib/admin-guard';
 import {
-  getCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  uploadImage,
+  getCategories, createCategory, updateCategory, deleteCategory, uploadImage,
 } from '@/lib/api';
+import { Plus, Image as ImageIcon, Pencil, Trash2, LayoutGrid, Loader2 } from 'lucide-react';
 
-/* ---------- Sélecteur de photo (aperçu en rond) ---------- */
-function RoundImagePicker({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (url: string) => void;
-}) {
+/* ---------- Sélecteur de photo ---------- */
+function ImagePicker({ value, onChange }: { value: string; onChange: (url: string) => void }) {
   const [uploading, setUploading] = useState(false);
-  const [err, setErr] = useState('');
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    setErr('');
     try {
       onChange(await uploadImage(file));
     } catch {
-      setErr("Échec de l'envoi de l'image");
+      alert("Échec de l'envoi de l'image");
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -37,35 +26,26 @@ function RoundImagePicker({
   }
 
   return (
-    <div className="flex items-center gap-3">
-      <label className="relative w-20 h-20 shrink-0 rounded-full overflow-hidden bg-gray-100 border-2 border-dashed border-gray-300 hover:border-gray-500 cursor-pointer flex items-center justify-center text-gray-400 text-xs text-center">
+    <div className="flex items-center gap-4">
+      <label className="relative w-24 h-24 shrink-0 rounded-full overflow-hidden bg-canvas border-2 border-dashed border-line hover:border-action cursor-pointer flex flex-col items-center justify-center text-ink/40 transition">
         {value ? (
           <img src={value} alt="" className="absolute inset-0 w-full h-full object-cover" />
         ) : (
-          <span>{uploading ? '...' : '+ Photo'}</span>
+          <>
+            {uploading ? <Loader2 size={24} className="animate-spin mb-1" /> : <ImageIcon size={24} className="mb-1" />}
+            <span className="text-[10px] font-semibold uppercase text-center leading-tight px-2">Ajouter<br/>une image</span>
+          </>
         )}
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={onFile}
-          disabled={uploading}
-        />
+        <input type="file" accept="image/*" className="hidden" onChange={onFile} disabled={uploading} />
       </label>
-      <div className="text-xs space-y-1">
-        {uploading && <p className="text-gray-500">Envoi en cours...</p>}
-        {value && !uploading && (
-          <button
-            type="button"
-            onClick={() => onChange('')}
-            className="text-red-500 hover:underline"
-          >
-            Retirer la photo
+      <div className="text-xs text-ink/50">
+        <p className="font-semibold text-ink/70 mb-1">Ajouter une image</p>
+        <p>PNG, JPG ou WEBP</p>
+        <p>Taille recommandée : 500 x 500 px</p>
+        {value && (
+          <button type="button" onClick={() => onChange('')} className="text-action font-semibold hover:underline mt-2">
+            Retirer
           </button>
-        )}
-        {err && <p className="text-red-500">{err}</p>}
-        {!value && !uploading && (
-          <p className="text-gray-400">Image carrée conseillée</p>
         )}
       </div>
     </div>
@@ -106,10 +86,7 @@ export default function AdminCategoriesPage() {
     setError('');
     setCreating(true);
     try {
-      await createCategory({
-        name: newName.trim(),
-        imageUrl: newImage || undefined,
-      });
+      await createCategory({ name: newName.trim(), imageUrl: newImage || undefined });
       setNewName('');
       setNewImage('');
       await load();
@@ -132,10 +109,7 @@ export default function AdminCategoriesPage() {
     setSaving(true);
     setError('');
     try {
-      await updateCategory(id, {
-        name: editName.trim(),
-        imageUrl: editImage || null,
-      });
+      await updateCategory(id, { name: editName.trim(), imageUrl: editImage || null });
       setEditingId(null);
       await load();
     } catch {
@@ -151,102 +125,113 @@ export default function AdminCategoriesPage() {
       await deleteCategory(id);
       load();
     } catch {
-      alert(
-        'Impossible de supprimer : des produits sont peut-être liés à cette catégorie.',
-      );
+      alert('Impossible de supprimer : des produits y sont peut-être liés.');
     }
   };
 
   return (
     <AdminGuard>
-      <h1 className="text-3xl font-bold mb-8">Catégories</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-ink">Catégories</h1>
+        <p className="text-sm text-ink/60 mt-1">Organisez les catégories de votre boutique.</p>
+      </div>
 
-      {/* Ajout */}
-      <form
-        onSubmit={handleCreate}
-        className="max-w-xl border rounded-xl p-5 mb-8 space-y-4"
-      >
-        <h2 className="font-semibold">Nouvelle catégorie</h2>
-        <RoundImagePicker value={newImage} onChange={setNewImage} />
-        <div className="flex gap-2">
-          <input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Nom de la catégorie"
-            className="flex-1 border rounded-lg px-3 py-2 bg-transparent"
-          />
+      {/* Formulaire de création (Nouvelle catégorie) */}
+      <div className="bg-white border border-line rounded-2xl p-6 shadow-sm mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center">
+            <LayoutGrid size={18} />
+          </div>
+          <h2 className="text-lg font-bold text-ink">Nouvelle catégorie</h2>
+        </div>
+
+        <form onSubmit={handleCreate} className="flex flex-col md:flex-row items-start md:items-end gap-6">
+          <ImagePicker value={newImage} onChange={setNewImage} />
+          
+          <div className="flex-1 w-full space-y-4">
+            <div>
+              <label className="block text-sm font-semibold mb-1.5">Nom de la catégorie *</label>
+              <input
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Ex : Chaussures, Vêtements..."
+                className="w-full border border-line rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-action bg-canvas/30"
+                required
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={creating || !newName.trim()}
-            className="bg-black text-white px-4 py-2 rounded-lg hover:opacity-90 disabled:opacity-50"
+            className="w-full md:w-auto bg-action text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-action-dark transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {creating ? '...' : 'Ajouter'}
+            {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            Ajouter la catégorie
           </button>
-        </div>
-      </form>
+        </form>
+        {error && <p className="text-action text-sm mt-4">{error}</p>}
+      </div>
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-
-      {/* Liste */}
+      {/* Liste des catégories */}
       {loading ? (
-        <p className="text-gray-500">Chargement...</p>
+        <div className="p-12 flex justify-center text-ink/50"><Loader2 className="animate-spin" size={24} /></div>
       ) : categories.length === 0 ? (
-        <p className="text-gray-500">Aucune catégorie.</p>
+        <div className="p-12 text-center text-ink/50 bg-white border border-line rounded-2xl">Aucune catégorie.</div>
       ) : (
-        <ul className="max-w-xl space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categories.map((c) => (
-            <li key={c.id} className="border rounded-xl px-4 py-3">
+            <div key={c.id} className="bg-white border border-line rounded-2xl p-4 shadow-sm hover:shadow-md transition">
+              
               {editingId === c.id ? (
-                <div className="space-y-3">
-                  <RoundImagePicker value={editImage} onChange={setEditImage} />
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 bg-transparent"
-                  />
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleSave(c.id)}
-                      disabled={saving || !editName.trim()}
-                      className="bg-black text-white px-4 py-1.5 rounded-lg text-sm hover:opacity-90 disabled:opacity-50"
-                    >
-                      {saving ? 'Enregistrement...' : 'Enregistrer'}
-                    </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      className="text-sm text-gray-500 hover:underline"
-                    >
-                      Annuler
-                    </button>
+                /* Mode ÉDITION */
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <ImagePicker value={editImage} onChange={setEditImage} />
+                  <div className="flex-1 space-y-3">
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full border border-line rounded-lg px-3 py-2 text-sm focus:border-action outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => handleSave(c.id)} disabled={saving} className="bg-ink text-white px-4 py-1.5 rounded-lg text-xs font-semibold hover:opacity-90">
+                        {saving ? 'Enregistrement...' : 'Enregistrer'}
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-ink/50 hover:text-ink">
+                        Annuler
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center text-gray-400 text-lg font-semibold">
+                /* Mode LECTURE (Design de ta capture) */
+                <div className="flex items-center gap-5">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-canvas border border-line shrink-0 flex items-center justify-center">
                     {c.imageUrl ? (
                       <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover" />
                     ) : (
-                      c.name.charAt(0).toUpperCase()
+                      <ImageIcon size={24} className="text-ink/20" />
                     )}
                   </div>
-                  <span className="flex-1 font-medium">{c.name}</span>
-                  <button
-                    onClick={() => startEdit(c)}
-                    className="text-blue-500 hover:underline text-sm"
-                  >
-                    Modifier
-                  </button>
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="text-red-500 hover:underline text-sm"
-                  >
-                    Supprimer
-                  </button>
+                  
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-ink text-lg truncate">{c.name}</p>
+                    <p className="text-sm text-ink/50">0 produits</p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(c)} className="inline-flex items-center gap-1.5 px-3 py-2 bg-canvas hover:bg-line text-ink text-xs font-semibold rounded-lg transition">
+                      <Pencil size={14} /> Modifier
+                    </button>
+                    <button onClick={() => handleDelete(c.id)} className="p-2 text-action bg-action-soft hover:bg-action hover:text-white rounded-lg transition">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               )}
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </AdminGuard>
   );
