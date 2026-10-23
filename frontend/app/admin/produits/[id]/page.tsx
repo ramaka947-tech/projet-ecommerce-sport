@@ -26,12 +26,13 @@ export default function EditProductPage() {
 
   return (
     <AdminGuard>
-      <h1 className="text-3xl font-bold mb-8">Modifier le produit</h1>
-      {loading ? (
-        <p className="text-gray-500">Chargement...</p>
-      ) : (
-        <ProductForm categories={categories} product={product} />
-      )}
+      <div className="max-w-6xl mx-auto">
+        {loading ? (
+          <p className="text-gray-500 p-8">Chargement...</p>
+        ) : (
+          <ProductForm categories={categories} product={product} />
+        )}
+      </div>
     </AdminGuard>
   );
 }

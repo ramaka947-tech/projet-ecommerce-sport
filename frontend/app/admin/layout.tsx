@@ -4,54 +4,60 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import {
-  LayoutDashboard, Package, ShoppingCart, Users, Palette, FileText,
-  BarChart3, Settings, ChevronDown, LogOut, Menu, X, Store,
-  Bell, PanelLeftClose, PanelLeftOpen
+  LayoutDashboard, Boxes, Package, FolderTree, Ruler,
+  ShoppingCart, ClipboardList, Wallet,
+  Users, MessagesSquare, Star,
+  LayoutTemplate, Images, Phone, Info,
+  Scale, ScrollText,
+  BarChart3, Settings, UserCircle,
+  ChevronDown, ChevronRight, LogOut, Menu, X, Store, Bell,
+  PanelLeftClose, PanelLeftOpen, User,
 } from 'lucide-react';
 import { removeToken } from '@/lib/auth';
 
 type NavItem = { href: string; label: string; icon: any };
-type NavGroup = { id: string; label: string; icon: any; items: { href: string; label: string }[] };
+type NavGroup = { id: string; label: string; icon: any; items: { href: string; label: string; icon?: any }[] };
 type NavEntry = NavItem | NavGroup;
 
 const navEntries: NavEntry[] = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   {
-    id: 'catalogue', label: 'Catalogue', icon: Package,
+    id: 'catalogue', label: 'Catalogue', icon: Boxes,
     items: [
-      { href: '/admin/produits', label: 'Produits' },
-      { href: '/admin/categories', label: 'Catégories' },
-      { href: '/admin/attributs', label: 'Tailles & couleurs' },
+      { href: '/admin/produits', label: 'Produits', icon: Package },
+      { href: '/admin/categories', label: 'Catégories', icon: FolderTree },
+      { href: '/admin/attributs', label: 'Tailles & couleurs', icon: Ruler },
     ],
   },
   {
     id: 'ventes', label: 'Ventes', icon: ShoppingCart,
     items: [
-      { href: '/admin/commandes', label: 'Commandes' },
-      { href: '/admin/paiements', label: 'Paiements' },
+      { href: '/admin/commandes', label: 'Commandes', icon: ClipboardList },
+      { href: '/admin/paiements', label: 'Paiements', icon: Wallet },
     ],
   },
   {
     id: 'clients', label: 'Clients', icon: Users,
     items: [
-      { href: '/admin/messages', label: 'Messages' },
-      { href: '/admin/avis', label: 'Avis' },
+      { href: '/admin/messages', label: 'Messages', icon: MessagesSquare },
+      { href: '/admin/avis', label: 'Avis', icon: Star },
     ],
   },
   {
-    id: 'apparence', label: 'Apparence', icon: Palette,
+    id: 'apparence', label: 'Apparence', icon: LayoutTemplate,
     items: [
-      { href: '/admin/hero', label: 'Bannière hero' },
-      { href: '/admin/contact', label: 'Contact' },
-      { href: '/admin/a-propos', label: 'À propos' },
+      { href: '/admin/hero', label: 'Bannière hero', icon: Images },
+      { href: '/admin/contact', label: 'Contact', icon: Phone },
+      { href: '/admin/a-propos', label: 'À propos', icon: Info },
     ],
   },
   {
-    id: 'legal', label: 'Pages légales', icon: FileText,
-    items: [{ href: '/admin/cgv', label: 'CGV' }],
+    id: 'legal', label: 'Pages légales', icon: Scale,
+    items: [{ href: '/admin/cgv', label: 'CGV', icon: ScrollText }],
   },
   { href: '/admin/statistiques', label: 'Statistiques', icon: BarChart3 },
-  { href: '/admin/settings', label: 'Réglages', icon: Settings },
+  { href: '/admin/configuration', label: 'Configuration', icon: Settings },
+  { href: '/admin/settings', label: 'Profil', icon: UserCircle },
 ];
 
 const isGroup = (e: NavEntry): e is NavGroup => 'items' in e;
@@ -77,9 +83,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [menuOpen, setMenuOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
-  
+  const [adminName, setAdminName] = useState<string>('Admin');
+
   const hoverTimeout = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const savedName = localStorage.getItem('admin_name');
+    if (savedName && savedName !== 'Admin') {
+      setAdminName(savedName);
+    } else {
+      // Fallback : si c'est "Admin" ou vide, on essaie d'utiliser l'email
+      const email = localStorage.getItem('admin_email');
+      if (email) {
+        setAdminName(email.split('@')[0]); // ex: "rama" depuis "rama@mail.com"
+      }
+    }
+  }, []);
 
   useEffect(() => {
     const next: Record<string, boolean> = {};
@@ -94,7 +114,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setHoveredGroup(null);
   }, [pathname]);
 
-  // Nettoyage du timeout
   useEffect(() => {
     return () => { if (hoverTimeout.current) clearTimeout(hoverTimeout.current); };
   }, []);
@@ -121,7 +140,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (pathname === '/admin/login') return <>{children}</>;
 
   const toggleGroup = (id: string) => setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
-  const handleLogout = () => { removeToken(); router.push('/admin/login'); };
+  const handleLogout = () => {
+    removeToken();
+    localStorage.removeItem('admin_name');
+    localStorage.removeItem('admin_email');
+    router.replace('/admin/login'); // replace : le bouton "précédent" ne ramène pas dans l'admin
+  };
   const { title, parent } = getPageInfo(pathname);
 
   const onMouseEnterGroup = (id: string) => {
@@ -135,7 +159,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }, 200);
   };
 
-  // --- Fonction pour générer la sidebar (pour gérer desktop et mobile) ---
   const renderSidebar = (isCollapsed: boolean) => (
     <div className="flex h-full flex-col bg-ink text-white">
       <div className={`flex h-16 shrink-0 items-center border-b border-white/10 ${isCollapsed ? 'justify-center' : 'px-5'}`}>
@@ -149,12 +172,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </Link>
       </div>
 
-      {/* 1. Désactiver l'overflow quand réduit */}
-      <nav className={`flex-1 py-4 space-y-1 px-2 ${
-        isCollapsed 
-          ? 'overflow-visible' 
-          : 'overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent'
-      }`}>
+      <nav className={`flex-1 py-4 space-y-1 px-2 ${isCollapsed
+        ? 'overflow-visible'
+        : 'overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent'
+        }`}>
         {navEntries.map((entry) => {
           if (isGroup(entry)) {
             const Icon = entry.icon;
@@ -163,8 +184,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             const isHovered = hoveredGroup === entry.id;
 
             return (
-              <div 
-                key={entry.id} 
+              <div
+                key={entry.id}
                 className="relative"
                 onMouseEnter={() => isCollapsed && onMouseEnterGroup(entry.id)}
                 onMouseLeave={() => isCollapsed && onMouseLeaveGroup()}
@@ -182,13 +203,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   )}
                 </button>
 
-                {/* SOUS-MENU NORMAL (Sidebar ouverte) */}
                 {!isCollapsed && isOpen && (
                   <div className="ml-9 mt-1 space-y-1 border-l-2 border-white/10 pl-3">
                     {entry.items.map((item) => {
                       const active = matches(pathname, item.href);
+                      const ItemIcon = item.icon;
                       return (
-                        <Link key={item.href} href={item.href} className={`block rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-action text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                        <Link key={item.href} href={item.href} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-action text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                          {ItemIcon && <ItemIcon size={16} className="shrink-0" />}
                           {item.label}
                         </Link>
                       );
@@ -196,30 +218,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   </div>
                 )}
 
-                {/* 2. SOUS-MENU VOLANT avec pont transparent (pl-2) */}
                 {isCollapsed && isHovered && (
                   <div
                     className="absolute left-full top-0 z-50 pl-2"
                     onMouseEnter={() => onMouseEnterGroup(entry.id)}
                     onMouseLeave={() => onMouseLeaveGroup()}
                   >
-                    <div className="w-48 rounded-xl bg-white p-2 shadow-xl">
+                    <div className="w-52 rounded-xl bg-white p-2 shadow-xl">
                       <p className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-ink/50">
                         {entry.label}
                       </p>
-                      {entry.items.map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          className={`block rounded-lg px-3 py-2 text-sm transition ${
-                            matches(pathname, item.href)
+                      {entry.items.map((item) => {
+                        const ItemIcon = item.icon;
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${matches(pathname, item.href)
                               ? 'bg-action/10 font-semibold text-action'
                               : 'text-ink/80 hover:bg-canvas'
-                          }`}
-                        >
-                          {item.label}
-                        </Link>
-                      ))}
+                              }`}
+                          >
+                            {ItemIcon && <ItemIcon size={16} className="shrink-0" />}
+                            {item.label}
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -239,8 +263,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Icon size={20} />
                 {!isCollapsed && <span className="text-sm">{entry.label}</span>}
               </Link>
-              
-              {/* 3. TOOLTIP avec pont transparent (pl-2) */}
+
               {isCollapsed && (
                 <div className="pointer-events-none absolute left-full top-1/2 z-50 -translate-y-1/2 pl-2 opacity-0 invisible transition-all group-hover:visible group-hover:opacity-100">
                   <div className="w-max rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-ink shadow-xl">
@@ -257,12 +280,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-canvas">
-      {/* Sidebar Desktop */}
       <aside className={`fixed inset-y-0 left-0 z-30 hidden transition-all duration-300 md:block ${collapsed ? 'w-20' : 'w-64'}`}>
         {renderSidebar(collapsed)}
       </aside>
 
-      {/* Sidebar Mobile - Utilise renderSidebar(false) */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
@@ -276,11 +297,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       <div className={`transition-all duration-300 ${collapsed ? 'md:pl-20' : 'md:pl-64'}`}>
-        <header className="sticky top-0 z-20 flex h-20 items-center gap-4 border-b border-line bg-white px-4 md:px-6 shadow-sm">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-line bg-white px-4 md:px-6 shadow-sm">
           <button
             onClick={() => { setCollapsed(!collapsed); setHoveredGroup(null); }}
             className="hidden md:flex items-center justify-center p-2 text-ink/60 hover:text-ink hover:bg-canvas rounded-lg transition"
-            title={collapsed ? "Ouvrir le menu" : "Fermer le menu"}
+            title={collapsed ? 'Ouvrir le menu' : 'Fermer le menu'}
           >
             {collapsed ? <PanelLeftOpen size={24} /> : <PanelLeftClose size={24} />}
           </button>
@@ -289,10 +310,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Menu size={24} />
           </button>
 
-          <div className="min-w-0 flex-1">
-            {parent && <p className="truncate text-xs font-medium text-ink/50">{parent}</p>}
-            <h2 className="truncate text-xl font-bold leading-tight text-ink">{title}</h2>
-          </div>
+          <nav aria-label="Fil d'Ariane" className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
+            <Link href="/admin/dashboard" className="hidden shrink-0 text-ink/50 transition hover:text-ink sm:inline">
+              Administration
+            </Link>
+            {parent && (
+              <>
+                <ChevronRight size={14} className="hidden shrink-0 text-ink/30 sm:block" />
+                <span className="hidden truncate text-ink/50 sm:inline">{parent}</span>
+              </>
+            )}
+            <ChevronRight size={14} className="hidden shrink-0 text-ink/30 sm:block" />
+            <span className="truncate font-semibold text-ink">{title}</span>
+          </nav>
 
           <Link href="/" target="_blank" className="hidden items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition hover:border-action hover:text-action lg:inline-flex">
             <Store size={16} /> Voir la boutique
@@ -305,15 +335,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           <div className="relative" ref={menuRef}>
             <button onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-2 rounded-lg p-1 pr-2 transition hover:bg-canvas">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm font-bold text-white">A</span>
-              <span className="hidden text-sm font-semibold text-ink md:block">Admin</span>
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm font-bold text-white uppercase">
+                {(() => {
+                  const name = (adminName || 'Admin').trim();
+                  const parts = name.split(/\s+/).filter(Boolean);
+                  if (parts.length === 1) {
+                    return parts[0].substring(0, 2).toUpperCase();
+                  }
+                  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                })()}
+              </span>
+              <span className="hidden text-sm font-semibold text-ink md:block">{adminName}</span>
               <ChevronDown size={16} className={`hidden text-ink/40 transition-transform md:block ${menuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {menuOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-line bg-white p-1.5 shadow-lg">
                 <Link href="/admin/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink/80 hover:bg-canvas hover:text-ink">
-                  <Settings size={16} /> Réglages
+                  <User size={16} /> Profil
                 </Link>
                 <div className="my-1 border-t border-line" />
                 <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-action hover:bg-action/5">

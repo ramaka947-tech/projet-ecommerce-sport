@@ -26,7 +26,14 @@ export class ProductsController {
 
   @Get()
   findAll(@Query() query: any) {
-    return this.productsService.findAll(query);
+    const { includeUnpublished, ...publicQuery } = query; // le public ne peut pas l'activer
+    return this.productsService.findAll(publicQuery);
+  }
+
+  @Get('admin/list')
+  @UseGuards(JwtAuthGuard)
+  findAllAdmin(@Query() query: any) {
+    return this.productsService.findAll({ ...query, includeOutOfStock: 'true', includeUnpublished: 'true' });
   }
 
   @Get(':id')

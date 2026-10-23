@@ -38,14 +38,20 @@ export class ProductsService {
     sizes?: string;
     colors?: string;
     brand?: string;
+    includeUnpublished?: string;
   } = {}) {
     const {
       categoryId, search, sort, minPrice, maxPrice, onSale,
       page, limit, paginated, includeOutOfStock,
       sizes, colors, brand,
+      includeUnpublished
     } = filters;
 
     const where: any = {};
+
+    if (includeUnpublished !== 'true') {
+      where.isPublished = true;
+    }
 
     if (includeOutOfStock !== 'true') {
       where.stock = { gt: 0 };

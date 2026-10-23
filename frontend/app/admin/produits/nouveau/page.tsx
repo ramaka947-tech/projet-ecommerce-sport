@@ -14,8 +14,9 @@ export default function NewProductPage() {
 
   return (
     <AdminGuard>
-      <h1 className="text-3xl font-bold mb-8">Nouveau produit</h1>
-      <ProductForm categories={categories} />
+      <div className="max-w-6xl mx-auto">
+        <ProductForm categories={categories} />
+      </div>
     </AdminGuard>
   );
 }

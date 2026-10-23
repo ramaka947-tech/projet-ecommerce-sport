@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-  createProduct,
-  updateProduct,
-  uploadImage,
-  getSizes,
-  getColors,
-  getBrands,
+  createProduct, updateProduct, uploadImage, getSizes, getColors, getBrands,
 } from '@/lib/api';
 import { compareSizes, sizeGroupOf } from '@/lib/sizes';
+import { 
+  X, Check, ImagePlus, Tag, List, Info, Percent, 
+  Settings2, Trash2, UploadCloud
+} from 'lucide-react';
 
 type Props = {
   categories: any[];
@@ -39,7 +39,6 @@ export default function ProductForm({ categories, product }: Props) {
     brands: product?.brands || [],
   });
 
-  // Contenu de la page produit
   const [shortDescription, setShortDescription] = useState<string>(product?.shortDescription || '');
   const [highlightsText, setHighlightsText] = useState<string>(
     Array.isArray(product?.highlights) ? product.highlights.join('\n') : '',
@@ -62,14 +61,11 @@ export default function ProductForm({ categories, product }: Props) {
     getBrands().then(setAvailableBrands).catch(() => {});
   }, []);
 
-  /* ---------- Type de tailles : Vêtements / Chaussures ---------- */
-
   const groups = useMemo(
     () => Array.from(new Set(availableSizes.map(sizeGroupOf))),
     [availableSizes],
   );
 
-  // Choix initial : déduit des tailles déjà cochées, sinon le premier groupe
   useEffect(() => {
     if (sizeGroup || availableSizes.length === 0) return;
     const firstPicked = availableSizes.find((s) => form.sizes.includes(s.name));
@@ -86,7 +82,6 @@ export default function ProductForm({ categories, product }: Props) {
 
   const changeSizeGroup = (g: string) => {
     setSizeGroup(g);
-    // On retire les tailles qui n'appartiennent pas au nouveau type
     setForm((f) => ({
       ...f,
       sizes: f.sizes.filter((name: string) =>
@@ -97,36 +92,20 @@ export default function ProductForm({ categories, product }: Props) {
 
   const isShoes = sizeGroup.toLowerCase().startsWith('chaussure');
 
-  /* ---------- Cases à cocher ---------- */
+  const toggleSize = (name: string) => setForm((f) => ({
+    ...f,
+    sizes: f.sizes.includes(name) ? f.sizes.filter((s: string) => s !== name) : [...f.sizes, name],
+  }));
 
-  const toggleSize = (name: string) => {
-    setForm((f) => ({
-      ...f,
-      sizes: f.sizes.includes(name)
-        ? f.sizes.filter((s: string) => s !== name)
-        : [...f.sizes, name],
-    }));
-  };
+  const toggleColor = (name: string) => setForm((f) => ({
+    ...f,
+    colors: f.colors.includes(name) ? f.colors.filter((c: string) => c !== name) : [...f.colors, name],
+  }));
 
-  const toggleColor = (name: string) => {
-    setForm((f) => ({
-      ...f,
-      colors: f.colors.includes(name)
-        ? f.colors.filter((c: string) => c !== name)
-        : [...f.colors, name],
-    }));
-  };
-
-  const toggleBrand = (name: string) => {
-    setForm((f) => ({
-      ...f,
-      brands: f.brands.includes(name)
-        ? f.brands.filter((b: string) => b !== name)
-        : [...f.brands, name],
-    }));
-  };
-
-  /* ---------- Images ---------- */
+  const toggleBrand = (name: string) => setForm((f) => ({
+    ...f,
+    brands: f.brands.includes(name) ? f.brands.filter((b: string) => b !== name) : [...f.brands, name],
+  }));
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -146,22 +125,14 @@ export default function ProductForm({ categories, product }: Props) {
     setForm((f) => ({ ...f, images: f.images.filter((i: string) => i !== url) }));
   };
 
-  /* ---------- Caractéristiques ---------- */
-
   const updateSpec = (i: number, patch: Partial<Spec>) =>
     setSpecs((list) => list.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   const addSpec = () => setSpecs((list) => [...list, { label: '', value: '', summary: false }]);
   const removeSpec = (i: number) => setSpecs((list) => list.filter((_, idx) => idx !== i));
-  const summaryCount = specs.filter((s) => s.summary).length;
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setForm({
-      ...form,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
-    });
+    setForm({ ...form, [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -176,14 +147,10 @@ export default function ProductForm({ categories, product }: Props) {
       stock: parseInt(form.stock as any, 10),
     };
 
-    // Nouveaux champs : envoyés seulement s'ils sont remplis, ou si le produit
-    // les connaît déjà (permet de les vider). Évite de casser l'API avant sa mise à jour.
     const extras: Record<string, any> = {
       shortDescription: shortDescription.trim(),
       highlights: highlightsText.split('\n').map((s) => s.trim()).filter(Boolean),
-      specs: specs
-        .filter((s) => s.label.trim() && s.value.trim())
-        .map((s) => ({ label: s.label.trim(), value: s.value.trim(), summary: !!s.summary })),
+      specs: specs.filter((s) => s.label.trim() && s.value.trim()).map((s) => ({ label: s.label.trim(), value: s.value.trim(), summary: !!s.summary })),
     };
     Object.entries(extras).forEach(([key, value]) => {
       const filled = Array.isArray(value) ? value.length > 0 : !!value;
@@ -192,11 +159,8 @@ export default function ProductForm({ categories, product }: Props) {
     });
 
     try {
-      if (isEdit) {
-        await updateProduct(product.id, payload);
-      } else {
-        await createProduct(payload);
-      }
+      if (isEdit) await updateProduct(product.id, payload);
+      else await createProduct(payload);
       router.push('/admin/produits');
     } catch (err: any) {
       setError(err.message || 'Une erreur est survenue');
@@ -204,341 +168,247 @@ export default function ProductForm({ categories, product }: Props) {
     }
   };
 
-  const inputCls = 'w-full border rounded-lg px-3 py-2 bg-transparent';
-  const chipCls = (active: boolean) =>
-    `border rounded px-3 py-1 text-sm cursor-pointer ${active ? 'bg-black text-white' : 'hover:bg-gray-100'}`;
+  const inputCls = "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20 transition-colors";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
-      <div>
-        <label className="block text-sm font-medium mb-1">Nom</label>
-        <input name="name" required value={form.name} onChange={handleChange} className={inputCls} />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">SKU</label>
-        <input name="sku" required value={form.sku} onChange={handleChange} className={inputCls} />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">
-          Description courte <span className="font-normal text-gray-500">(sous le prix)</span>
-        </label>
-        <textarea
-          value={shortDescription}
-          onChange={(e) => setShortDescription(e.target.value)}
-          rows={2}
-          maxLength={300}
-          className={inputCls}
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Description complète</label>
-        <textarea
-          name="description"
-          value={form.description}
-          onChange={handleChange}
-          rows={4}
-          className={inputCls}
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit}>
+      
+      {/* Barre d'actions en haut */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <label className="block text-sm font-medium mb-1">Prix (FCFA)</label>
-          <input
-            name="price"
-            type="number"
-            step="1"
-            required
-            value={form.price}
-            onChange={handleChange}
-            className={inputCls}
-          />
+          <h1 className="text-2xl font-bold text-ink">{isEdit ? 'Modifier le produit' : 'Nouveau produit'}</h1>
+          <p className="text-sm text-ink/60 mt-1">Modifiez les informations du produit ci-dessous.</p>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Stock</label>
-          <input
-            name="stock"
-            type="number"
-            required
-            value={form.stock}
-            onChange={handleChange}
-            className={inputCls}
-          />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <Link href="/admin/produits" className="flex-1 md:flex-none text-center px-5 py-2.5 rounded-lg border border-line text-ink font-semibold hover:bg-canvas transition">
+            Annuler
+          </Link>
+          <button type="submit" disabled={loading} className="flex-1 md:flex-none bg-ink text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-ink/90 transition disabled:opacity-50">
+            {loading ? 'Enregistrement...' : 'Enregistrer'}
+          </button>
         </div>
       </div>
 
-      <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={onSale} onChange={(e) => setOnSale(e.target.checked)} />
-          En promotion
-        </label>
+      <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
+        
+        {/* COLONNE GAUCHE */}
+        <div className="space-y-6">
+          
+          {/* Informations générales */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
+              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><Info size={18} /></div>
+              <h2 className="text-lg font-bold text-ink">Informations générales</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Nom du produit *</label>
+                  <input name="name" required value={form.name} onChange={handleChange} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">SKU *</label>
+                  <input name="sku" required value={form.sku} onChange={handleChange} className={inputCls} />
+                </div>
+              </div>
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Prix (FCFA) *</label>
+                  <input name="price" type="number" required value={form.price} onChange={handleChange} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Stock *</label>
+                  <input name="stock" type="number" required value={form.stock} onChange={handleChange} className={inputCls} />
+                </div>
+              </div>
 
-        {onSale && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Prix promo (FCFA)</label>
-            <input
-              name="promoPrice"
-              type="number"
-              step="1"
-              required
-              value={form.promoPrice}
-              onChange={handleChange}
-              className={inputCls}
-            />
-          </div>
-        )}
-      </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Catégorie *</label>
+                  <select name="categoryId" required value={form.categoryId} onChange={handleChange} className={inputCls}>
+                    <option value="">-- Choisir --</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5">Marques (optionnel)</label>
+                  <div className="flex flex-wrap gap-2 border border-line rounded-lg p-1.5 bg-canvas/30 min-h-[46px]">
+                    {form.brands.map((b: string) => (
+                      <span key={b} className="inline-flex items-center gap-1 bg-white border border-line rounded-md px-2 py-1 text-xs font-medium">
+                        {b} <button type="button" onClick={() => toggleBrand(b)} className="hover:text-action"><X size={12} /></button>
+                      </span>
+                    ))}
+                    <select 
+                      onChange={(e) => { if(e.target.value) { toggleBrand(e.target.value); e.target.value = ""; } }} 
+                      className="bg-transparent text-sm outline-none flex-1 min-w-[100px]"
+                    >
+                      <option value="">+ Ajouter</option>
+                      {availableBrands.filter(b => !form.brands.includes(b.name)).map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1">Catégorie</label>
-        <select
-          name="categoryId"
-          required
-          value={form.categoryId}
-          onChange={handleChange}
-          className={inputCls}
-        >
-          <option value="" className="text-black">
-            -- Choisir --
-          </option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id} className="text-black">
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">Description courte (sous le prix)</label>
+                <textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} rows={2} className={inputCls} />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">Description complète</label>
+                <textarea name="description" value={form.description} onChange={handleChange} rows={4} className={inputCls} />
+              </div>
+            </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-2">Marques disponibles (optionnel)</label>
-        <div className="flex flex-wrap gap-2">
-          {availableBrands.map((b) => (
-            <label key={b.id} className={chipCls(form.brands.includes(b.name))}>
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={form.brands.includes(b.name)}
-                onChange={() => toggleBrand(b.name)}
-              />
-              {b.name}
-            </label>
-          ))}
-          {availableBrands.length === 0 && (
-            <p className="text-sm text-gray-500">
-              Aucune marque définie. Ajoutez-en dans{' '}
-              <a href="/admin/attributs" className="underline">Variantes</a>.
-            </p>
-          )}
+            {/* Promotion (dans le même bloc) */}
+            <div className="mt-6 p-4 rounded-xl border border-action/20 bg-action/5">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 font-bold text-action"><Percent size={18} /> Promotion</div>
+                <button type="button" onClick={() => setOnSale(!onSale)} className={`w-10 h-5 rounded-full relative transition-colors ${onSale ? 'bg-action' : 'bg-line'}`}>
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${onSale ? 'left-[22px]' : 'left-0.5'}`} />
+                </button>
+              </div>
+              {onSale && (
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold mb-1.5">Prix promo (FCFA)</label>
+                    <input name="promoPrice" type="number" required value={form.promoPrice} onChange={handleChange} className={inputCls} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Points forts & caractéristiques */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
+              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><List size={18} /></div>
+              <h2 className="text-lg font-bold text-ink">Détails du produit</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">Points forts (un par ligne)</label>
+                <textarea value={highlightsText} onChange={(e) => setHighlightsText(e.target.value)} rows={3} className={inputCls} />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-semibold mb-1.5">Caractéristiques</label>
+                {specs.map((s, i) => (
+                  <div key={i} className="flex gap-2 mb-2 items-center">
+                    <input value={s.label} onChange={(e) => updateSpec(i, { label: e.target.value })} placeholder="Libellé" className={`${inputCls} flex-1`} />
+                    <input value={s.value} onChange={(e) => updateSpec(i, { value: e.target.value })} placeholder="Valeur" className={`${inputCls} flex-1`} />
+                    <button type="button" onClick={() => removeSpec(i)} className="p-2 text-action hover:bg-action-soft rounded-lg"><Trash2 size={16}/></button>
+                  </div>
+                ))}
+                <button type="button" onClick={addSpec} className="text-sm font-semibold text-action mt-2 hover:underline">+ Ajouter une caractéristique</button>
+              </div>
+            </div>
+          </section>
         </div>
-      </div>
 
-      {/* Tailles : le type décide des valeurs proposées */}
-      <div>
-        <label className="block text-sm font-medium mb-2">Tailles disponibles (optionnel)</label>
+        {/* COLONNE DROITE */}
+        <div className="space-y-6">
+          
+          {/* Images */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
+              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><ImagePlus size={18} /></div>
+              <h2 className="text-lg font-bold text-ink">Images du produit</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {form.images.map((url: string) => (
+                <div key={url} className="relative aspect-square rounded-xl border border-line overflow-hidden group">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button type="button" onClick={() => removeImage(url)} className="absolute top-1 right-1 bg-action text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition">
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+              
+              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-line rounded-xl hover:border-action hover:bg-action/5 cursor-pointer transition text-ink/50 hover:text-action">
+                <UploadCloud size={24} className="mb-2" />
+                <span className="text-xs font-semibold">{uploading ? 'Chargement...' : 'Ajouter'}</span>
+                <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
+              </label>
+            </div>
+          </section>
 
-        {groups.length > 1 && (
-          <div className="mb-3">
-            <div className="inline-flex rounded-lg border overflow-hidden">
-              {groups.map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => changeSizeGroup(g)}
-                  className={`px-4 py-1.5 text-sm transition ${
-                    sizeGroup === g ? 'bg-black text-white' : 'hover:bg-gray-100'
-                  }`}
-                >
-                  {g}
+          {/* Tailles */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Settings2 size={14} /></div>
+              <h2 className="text-sm font-bold text-ink">Tailles disponibles</h2>
+            </div>
+            
+            {groups.length > 1 && (
+              <div className="flex bg-canvas rounded-lg p-1 mb-4">
+                {groups.map((g) => (
+                  <button key={g} type="button" onClick={() => changeSizeGroup(g)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition ${sizeGroup === g ? 'bg-white shadow-sm text-ink' : 'text-ink/50 hover:text-ink'}`}>
+                    {g}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {visibleSizes.map((s) => (
+                <button key={s.id} type="button" onClick={() => toggleSize(s.name)} className={`w-10 h-10 rounded-lg border text-sm font-medium transition flex items-center justify-center ${form.sizes.includes(s.name) ? 'border-action bg-action/5 text-action' : 'border-line hover:border-ink/30 text-ink/70'}`}>
+                  {s.name}
                 </button>
               ))}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {isShoes
-                ? 'Pointures : 40, 41, 42…'
-                : 'Tailles : S, M, L…'}{' '}
-              Changer de type retire les tailles déjà cochées.
-            </p>
-          </div>
-        )}
+          </section>
 
-        <div className="flex flex-wrap gap-2">
-          {visibleSizes.map((s) => (
-            <label key={s.id} className={chipCls(form.sizes.includes(s.name))}>
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={form.sizes.includes(s.name)}
-                onChange={() => toggleSize(s.name)}
-              />
-              {s.name}
-            </label>
-          ))}
-          {availableSizes.length === 0 && (
-            <p className="text-sm text-gray-500">
-              Aucune taille définie. Ajoutez-en dans{' '}
-              <a href="/admin/attributs" className="underline">Variantes</a>.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-2">Couleurs disponibles (optionnel)</label>
-        <div className="flex flex-wrap gap-2">
-          {availableColors.map((c) => (
-            <label key={c.id} className={chipCls(form.colors.includes(c.name))}>
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={form.colors.includes(c.name)}
-                onChange={() => toggleColor(c.name)}
-              />
-              {c.name}
-            </label>
-          ))}
-          {availableColors.length === 0 && (
-            <p className="text-sm text-gray-500">
-              Aucune couleur définie. Ajoutez-en dans{' '}
-              <a href="/admin/attributs" className="underline">Variantes</a>.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Images</label>
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          onChange={handleImageUpload}
-          disabled={uploading}
-          className="w-full text-sm"
-        />
-        {uploading && <p className="text-xs text-gray-500 mt-1">Upload en cours...</p>}
-        {form.images.length > 0 && (
-          <div className="flex flex-wrap gap-3 mt-3">
-            {form.images.map((url: string) => (
-              <div key={url} className="relative">
-                <img src={url} alt="" className="w-24 h-24 object-cover rounded border" />
-                <button
-                  type="button"
-                  onClick={() => removeImage(url)}
-                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 text-xs"
-                >
-                  ×
+          {/* Couleurs */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Tag size={14} /></div>
+              <h2 className="text-sm font-bold text-ink">Couleurs disponibles</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {availableColors.map((c) => (
+                <button key={c.id} type="button" onClick={() => toggleColor(c.name)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${form.colors.includes(c.name) ? 'border-action bg-action/5 text-action' : 'border-line hover:border-ink/30 text-ink/70'}`}>
+                  <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: c.hex || '#ccc' }} />
+                  {c.name}
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          </section>
 
-      {/* Contenu de la page produit */}
-      <div className="space-y-4 border-t pt-4">
-        <h2 className="font-semibold">Page produit</h2>
+          {/* Statut */}
+          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Check size={14} /></div>
+              <h2 className="text-sm font-bold text-ink">Statut du produit</h2>
+            </div>
+            
+            <div className="space-y-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium">Visible dans la boutique</span>
+                <div className={`w-10 h-5 rounded-full relative transition-colors ${form.isPublished ? 'bg-action' : 'bg-line'}`}>
+                  <input type="checkbox" name="isPublished" checked={form.isPublished} onChange={handleChange} className="hidden" />
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.isPublished ? 'left-[22px]' : 'left-0.5'}`} />
+                </div>
+              </label>
+              
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm font-medium">Mettre en avant (Accueil)</span>
+                <div className={`w-10 h-5 rounded-full relative transition-colors ${form.isFeatured ? 'bg-action' : 'bg-line'}`}>
+                  <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} className="hidden" />
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.isFeatured ? 'left-[22px]' : 'left-0.5'}`} />
+                </div>
+              </label>
+            </div>
+          </section>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Points forts <span className="font-normal text-gray-500">(un par ligne)</span>
-          </label>
-          <textarea
-            value={highlightsText}
-            onChange={(e) => setHighlightsText(e.target.value)}
-            rows={4}
-            placeholder={'Excellente adhérence\nConfort optimal\nLégèreté et respirabilité'}
-            className={inputCls}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Caractéristiques</label>
-          <div className="space-y-2">
-            {specs.map((s, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  value={s.label}
-                  onChange={(e) => updateSpec(i, { label: e.target.value })}
-                  placeholder="Libellé (ex : Matériau)"
-                  className="flex-1 border rounded-lg px-3 py-2 bg-transparent text-sm"
-                />
-                <input
-                  value={s.value}
-                  onChange={(e) => updateSpec(i, { value: e.target.value })}
-                  placeholder="Valeur (ex : Synthétique)"
-                  className="flex-1 border rounded-lg px-3 py-2 bg-transparent text-sm"
-                />
-                <label
-                  className="flex items-center gap-1 text-xs text-gray-600 whitespace-nowrap"
-                  title="Afficher en résumé sous le prix (3 maximum)"
-                >
-                  <input
-                    type="checkbox"
-                    checked={!!s.summary}
-                    disabled={!s.summary && summaryCount >= 3}
-                    onChange={(e) => updateSpec(i, { summary: e.target.checked })}
-                  />
-                  Résumé
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeSpec(i)}
-                  aria-label="Supprimer la caractéristique"
-                  className="text-red-500 hover:text-red-700 px-2"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="button" onClick={addSpec} className="mt-2 text-sm underline">
-            + Ajouter une caractéristique
-          </button>
-          <p className="text-xs text-gray-500 mt-1">
-            Inutile d'ajouter la marque, les tailles ou les couleurs : elles sont déjà affichées.
-          </p>
         </div>
       </div>
 
-      <div className="space-y-3 border-t pt-4">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            name="isPublished"
-            checked={form.isPublished}
-            onChange={handleChange}
-          />
-          Produit publié (visible sur la boutique)
-        </label>
-
-        <div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name="isFeatured"
-              checked={form.isFeatured}
-              onChange={handleChange}
-            />
-            Mettre en avant sur la page d&apos;accueil
-          </label>
-          <p className="text-xs text-gray-500 mt-1 ml-6">
-            L&apos;accueil affiche 4 produits mis en avant au maximum.
-          </p>
-        </div>
-      </div>
-
-      {error && <p className="text-red-500 text-sm">{error}</p>}
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-black text-white px-6 py-3 rounded-lg hover:opacity-90 disabled:opacity-50"
-      >
-        {loading ? 'Enregistrement...' : isEdit ? 'Modifier' : 'Créer'}
-      </button>
+      {error && <div className="mt-6 p-4 bg-action-soft border border-action/20 text-action rounded-lg">{error}</div>}
     </form>
   );
 }
