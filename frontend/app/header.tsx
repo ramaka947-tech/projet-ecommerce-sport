@@ -1,13 +1,13 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Heart, ShoppingCart, User, Search } from 'lucide-react';
 import { getSettings } from '@/lib/api';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
 
-export default function Header() {
+function HeaderContent() {
   const [shopName, setShopName] = useState('SportPro');
   const [search, setSearch] = useState('');
   const { count: cartCount } = useCart();
@@ -105,5 +105,15 @@ export default function Header() {
         ))}
       </nav>
     </header>
+  );
+}
+
+// Next.js exige un Suspense autour de useSearchParams().
+// Le fallback réserve la place du header pour éviter un saut de mise en page.
+export default function Header() {
+  return (
+    <Suspense fallback={<div className="hidden md:block h-28 bg-ink" aria-hidden="true" />}>
+      <HeaderContent />
+    </Suspense>
   );
 }

@@ -1,11 +1,11 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { getSettings } from '@/lib/api';
 
-export default function MobileHeader() {
+function MobileHeaderContent() {
   const [shopName, setShopName] = useState('SportPro');
   const [search, setSearch] = useState('');
   const router = useRouter();
@@ -48,5 +48,14 @@ export default function MobileHeader() {
         </div>
       </form>
     </header>
+  );
+}
+
+// Next.js exige un Suspense autour de useSearchParams().
+export default function MobileHeader() {
+  return (
+    <Suspense fallback={<div className="md:hidden h-28 bg-ink" aria-hidden="true" />}>
+      <MobileHeaderContent />
+    </Suspense>
   );
 }
