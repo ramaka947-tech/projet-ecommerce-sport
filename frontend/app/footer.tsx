@@ -3,12 +3,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/api';
 import ShopName from '@/components/shop-name';
+import { InstallAppButton } from '@/components/pwa';
 
 const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
 const LOGO_SRC = '/logo.png';
 const DEFAULT_PHONES = ['78 486 04 22', '70 898 03 53'];
-const SITE_URL = 'https://adsportsolution.com';
-const SITE_LABEL = 'adsportsolution.com';
 
 export default function Footer() {
   const [s, setS] = useState<Record<string, string>>({});
@@ -138,12 +137,8 @@ export default function Footer() {
                 <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className={link}>{phone}</a>
               </li>
             ))}
-            <li>
-              <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className={link}>
-                {SITE_LABEL}
-              </a>
-            </li>
           </ul>
+          <InstallAppButton className="mt-4" />
         </div>
       </div>
 

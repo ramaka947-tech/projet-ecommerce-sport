@@ -10,6 +10,7 @@ import MobileHeader from './mobile-header';
 import TopBar from './top-bar';
 import SavedDataSync from '@/components/saved-data-sync';
 import SiteChrome from './site-chrome';
+import { PwaRegister } from '@/components/pwa';
 
 export const metadata: Metadata = {
   title: {
@@ -20,8 +21,13 @@ export const metadata: Metadata = {
     "Vente de tout genre d'équipements de sport au Sénégal : maillots, chaussures, ballons, musculation et plus.",
   applicationName: "AD Sport Solutions",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "AD Sport",
+    statusBarStyle: "black",
   },
 };
 
@@ -36,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <PwaRegister />
         <CartProvider>
           <FavoritesProvider>
             <CustomerAuthProvider>
