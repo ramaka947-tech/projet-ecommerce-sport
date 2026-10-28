@@ -5,18 +5,32 @@ import { setCustomerSession, getCustomerToken, getCustomer, removeCustomerSessio
 type Ctx = {
   customer: any;
   isLoggedIn: boolean;
+  loaded: boolean; // ← AJOUT : true quand le localStorage a été lu
   login: (token: string, customer: any) => void;
   logout: () => void;
-  updateCustomer: (customer: any) => void; // AJOUT : met à jour les infos affichées
+  updateCustomer: (customer: any) => void;
 };
 
 const CustomerAuthContext = createContext<Ctx | null>(null);
 
 export function CustomerAuthProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<any>(null);
+  const [loaded, setLoaded] = useState(false); // ← AJOUT
 
   useEffect(() => {
-    if (getCustomerToken()) setCustomer(getCustomer());
+    try {
+      const token = getCustomerToken();
+      if (token) {
+        const cust = getCustomer();
+        if (cust) setCustomer(cust);
+        else removeCustomerSession(); // token présent mais client absent → on nettoie
+      }
+    } catch {
+      // localStorage bloqué / corrompu → on considère non connecté
+      removeCustomerSession();
+    } finally {
+      setLoaded(true); // ← dans tous les cas, on a fini de lire
+    }
   }, []);
 
   const login = (token: string, cust: any) => {
@@ -29,8 +43,6 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     setCustomer(null);
   };
 
-  // AJOUT : après une modification du profil, on garde le même token
-  // et on remplace seulement les infos du client (mémoire + localStorage)
   const updateCustomer = (cust: any) => {
     const token = getCustomerToken();
     if (token) setCustomerSession(token, cust);
@@ -41,6 +53,7 @@ export function CustomerAuthProvider({ children }: { children: React.ReactNode }
     <CustomerAuthContext.Provider value={{
       customer,
       isLoggedIn: !!customer,
+      loaded,
       login,
       logout,
       updateCustomer,

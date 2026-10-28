@@ -39,6 +39,27 @@ type CartContextType = {
 const CartContext = createContext<CartContextType | null>(null);
 const STORAGE_KEY = 'cart';
 
+// Ne garde que les lignes exploitables (un panier abîmé ne doit pas faire planter le site)
+function sanitize(value: unknown): CartItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (i) =>
+        i &&
+        typeof i.id === 'string' &&
+        typeof i.productId !== 'undefined' &&
+        Number.isFinite(Number(i.price)) &&
+        Number.isFinite(Number(i.quantity)) &&
+        Number(i.quantity) > 0
+    )
+    .map((i) => ({
+      ...i,
+      price: Number(i.price),
+      quantity: Number(i.quantity),
+      stock: Number.isFinite(Number(i.stock)) ? Number(i.stock) : Number(i.quantity),
+    }));
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -46,7 +67,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
+      if (raw) setItems(sanitize(JSON.parse(raw)));
     } catch {}
     setLoaded(true);
   }, []);

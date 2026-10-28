@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart-context";
 import { FavoritesProvider } from '@/lib/favorites-context';
@@ -6,13 +6,30 @@ import Header from "./header";
 import Footer from "./footer";
 import { CustomerAuthProvider } from '@/lib/customer-auth-context';
 import MobileNav from './mobile-nav';
+import MobileHeader from './mobile-header';
 import TopBar from './top-bar';
 import SavedDataSync from '@/components/saved-data-sync';
 import SiteChrome from './site-chrome';
 
 export const metadata: Metadata = {
-  title: "SportPro",
-  description: "Boutique d'articles de sport",
+  title: {
+    default: "AD Sport Solutions",
+    template: "%s | AD Sport Solutions",
+  },
+  description:
+    "Vente de tout genre d'équipements de sport au Sénégal : maillots, chaussures, ballons, musculation et plus.",
+  applicationName: "AD Sport Solutions",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0a0a0a",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -25,10 +42,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               <SavedDataSync />
               <SiteChrome
                 header={
-                  <div className="sticky top-0 z-40">
-                    <TopBar />
-                    <Header />
-                  </div>
+                  <>
+                    {/* Desktop : TopBar + Header, collés en haut ensemble */}
+                    <div className="sticky top-0 z-40">
+                      <TopBar />
+                      <Header />
+                    </div>
+
+                    {/* Mobile : logo + recherche. Doit rester HORS du bloc sticky ci-dessus,
+                        car il gère lui-même son « collé en haut » (et son masquage au scroll). */}
+                    <MobileHeader />
+                  </>
                 }
                 footer={
                   <>

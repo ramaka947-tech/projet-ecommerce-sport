@@ -11,18 +11,25 @@ export default function ProductTabs({ tabs }: { tabs: Tab[] }) {
 
   return (
     <div className="bg-white rounded-2xl border border-line shadow-sm overflow-hidden">
-      <div role="tablist" className="flex gap-6 px-6 lg:px-8 border-b border-line overflow-x-auto">
+      <div
+        role="tablist"
+        className="flex gap-5 px-4 sm:gap-6 sm:px-6 lg:px-8 border-b border-line overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {tabs.map((t) => {
           const isActive = t.id === active;
           return (
             <button
               key={t.id}
+              id={`tab-${t.id}`}
               role="tab"
               type="button"
               aria-selected={isActive}
+              aria-controls={`panel-${t.id}`}
               onClick={() => setActive(t.id)}
-              className={`relative py-4 text-sm whitespace-nowrap transition-colors ${
-                isActive ? 'font-bold text-ink' : 'text-ink/50 hover:text-ink'
+              className={`relative min-h-12 touch-manipulation py-3.5 text-sm whitespace-nowrap transition-colors md:min-h-0 md:py-4 ${
+                isActive
+                  ? 'font-bold text-ink'
+                  : 'text-ink/70 active:text-ink md:text-ink/50 md:hover:text-ink'
               }`}
             >
               {t.label}
@@ -35,7 +42,14 @@ export default function ProductTabs({ tabs }: { tabs: Tab[] }) {
       </div>
 
       {tabs.map((t) => (
-        <div key={t.id} role="tabpanel" hidden={t.id !== active} className="p-6 lg:p-8">
+        <div
+          key={t.id}
+          id={`panel-${t.id}`}
+          role="tabpanel"
+          aria-labelledby={`tab-${t.id}`}
+          hidden={t.id !== active}
+          className="p-4 sm:p-6 lg:p-8"
+        >
           {t.content}
         </div>
       ))}

@@ -89,15 +89,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const savedName = localStorage.getItem('admin_name');
-    if (savedName && savedName !== 'Admin') {
-      setAdminName(savedName);
-    } else {
-      // Fallback : si c'est "Admin" ou vide, on essaie d'utiliser l'email
-      const email = localStorage.getItem('admin_email');
-      if (email) {
-        setAdminName(email.split('@')[0]); // ex: "rama" depuis "rama@mail.com"
+    try {
+      const savedName = localStorage.getItem('admin_name');
+      if (savedName && savedName !== 'Admin') {
+        setAdminName(savedName);
+      } else {
+        // Fallback : si c'est "Admin" ou vide, on essaie d'utiliser l'email
+        const email = localStorage.getItem('admin_email');
+        if (email) {
+          setAdminName(email.split('@')[0]); // ex: "rama" depuis "rama@mail.com"
+        }
       }
+    } catch {
+      /* stockage indisponible : on garde "Admin" */
     }
   }, []);
 
@@ -123,16 +127,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
+  // Échap ferme le menu latéral mobile
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMobileOpen(false); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
   useEffect(() => {
     if (!menuOpen) return;
-    const onClick = (e: MouseEvent) => {
+    const onClick = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenuOpen(false); };
-    document.addEventListener('mousedown', onClick);
+    document.addEventListener('pointerdown', onClick);
     document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('pointerdown', onClick);
       document.removeEventListener('keydown', onKey);
     };
   }, [menuOpen]);
@@ -142,8 +154,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const toggleGroup = (id: string) => setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
   const handleLogout = () => {
     removeToken();
-    localStorage.removeItem('admin_name');
-    localStorage.removeItem('admin_email');
+    try {
+      localStorage.removeItem('admin_name');
+      localStorage.removeItem('admin_email');
+    } catch {
+      /* ignore */
+    }
     router.replace('/admin/login'); // replace : le bouton "précédent" ne ramène pas dans l'admin
   };
   const { title, parent } = getPageInfo(pathname);
@@ -162,19 +178,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const renderSidebar = (isCollapsed: boolean) => (
     <div className="flex h-full flex-col bg-ink text-white">
       <div className={`flex h-16 shrink-0 items-center border-b border-white/10 ${isCollapsed ? 'justify-center' : 'px-5'}`}>
-        <Link href="/admin/dashboard" className="flex items-center gap-2">
-          <img src="/logo.png" alt="SportPro" className={`${isCollapsed ? 'h-8' : 'h-10'} w-auto`} />
+        <Link href="/admin/dashboard" className="flex items-center gap-2.5">
+          <img
+            src="/logo.png"
+            alt="AD Sport Solutions"
+            className={`${isCollapsed ? 'size-9' : 'size-10'} shrink-0 rounded-full object-cover`}
+          />
           {!isCollapsed && (
-            <span className="text-xl font-black tracking-tight">
-              Sport<span className="text-action">Pro</span>
+            <span className="flex flex-col text-base font-black leading-none tracking-tight">
+              <span>AD Sport</span>
+              <span className="mt-0.5 text-action">Solutions</span>
             </span>
           )}
         </Link>
       </div>
 
-      <nav className={`flex-1 py-4 space-y-1 px-2 ${isCollapsed
+      <nav className={`min-h-0 flex-1 py-4 space-y-1 px-2 ${isCollapsed
         ? 'overflow-visible'
-        : 'overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent'
+        : 'overflow-y-auto overscroll-contain [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-track]:bg-transparent'
         }`}>
         {navEntries.map((entry) => {
           if (isGroup(entry)) {
@@ -192,7 +213,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <button
                   onClick={() => !isCollapsed && toggleGroup(entry.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition ${hasActive ? 'text-white' : 'text-white/80 hover:bg-white/5 hover:text-white'} ${isCollapsed ? 'justify-center' : ''} ${isHovered ? 'bg-white/10' : ''}`}
+                  className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-bold transition md:min-h-0 ${hasActive ? 'text-white' : 'text-white/80 hover:bg-white/5 hover:text-white'} ${isCollapsed ? 'justify-center' : ''} ${isHovered ? 'bg-white/10' : ''}`}
                 >
                   <Icon size={20} className={hasActive ? 'text-action' : ''} />
                   {!isCollapsed && (
@@ -209,7 +230,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       const active = matches(pathname, item.href);
                       const ItemIcon = item.icon;
                       return (
-                        <Link key={item.href} href={item.href} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition ${active ? 'bg-action text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+                        <Link key={item.href} href={item.href} className={`flex min-h-11 items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition md:min-h-0 ${active ? 'bg-action text-white font-semibold' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
                           {ItemIcon && <ItemIcon size={16} className="shrink-0" />}
                           {item.label}
                         </Link>
@@ -258,7 +279,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div key={entry.href} className="relative group">
               <Link
                 href={entry.href}
-                className={`flex items-center w-full rounded-lg transition ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'} ${active ? 'bg-action text-white font-bold' : 'text-white/80 font-bold hover:bg-white/5 hover:text-white'}`}
+                className={`flex min-h-11 w-full items-center rounded-lg transition md:min-h-0 ${isCollapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'} ${active ? 'bg-action text-white font-bold' : 'text-white/80 font-bold hover:bg-white/5 hover:text-white'}`}
               >
                 <Icon size={20} />
                 {!isCollapsed && <span className="text-sm">{entry.label}</span>}
@@ -279,16 +300,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   );
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-dvh bg-canvas">
       <aside className={`fixed inset-y-0 left-0 z-30 hidden transition-all duration-300 md:block ${collapsed ? 'w-20' : 'w-64'}`}>
         {renderSidebar(collapsed)}
       </aside>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-60 md:hidden">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64 bg-ink shadow-2xl">
-            <button onClick={() => setMobileOpen(false)} className="absolute right-4 top-4 text-white/50 hover:text-white z-50">
+          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-ink pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-2xl">
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Fermer le menu"
+              className="absolute right-2 top-[calc(0.625rem+env(safe-area-inset-top))] z-10 flex size-11 items-center justify-center rounded-lg text-white/60 hover:text-white"
+            >
               <X size={20} />
             </button>
             {renderSidebar(false)}
@@ -296,8 +321,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       )}
 
-      <div className={`transition-all duration-300 ${collapsed ? 'md:pl-20' : 'md:pl-64'}`}>
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-line bg-white px-4 md:px-6 shadow-sm">
+      <div className={`min-w-0 transition-all duration-300 ${collapsed ? 'md:pl-20' : 'md:pl-64'}`}>
+        <header className="sticky top-0 z-20 flex h-[calc(4rem+env(safe-area-inset-top))] items-center gap-2 border-b border-line bg-white px-3 pt-[env(safe-area-inset-top)] shadow-sm sm:gap-4 md:h-16 md:px-6 md:pt-0">
           <button
             onClick={() => { setCollapsed(!collapsed); setHoveredGroup(null); }}
             className="hidden md:flex items-center justify-center p-2 text-ink/60 hover:text-ink hover:bg-canvas rounded-lg transition"
@@ -306,7 +331,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {collapsed ? <PanelLeftOpen size={24} /> : <PanelLeftClose size={24} />}
           </button>
 
-          <button onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-ink/70 hover:bg-canvas md:hidden">
+          <button
+            onClick={() => setMobileOpen(true)}
+            aria-label="Ouvrir le menu"
+            className="flex size-11 shrink-0 items-center justify-center rounded-lg text-ink/70 hover:bg-canvas md:hidden"
+          >
             <Menu size={24} />
           </button>
 
@@ -321,20 +350,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </>
             )}
             <ChevronRight size={14} className="hidden shrink-0 text-ink/30 sm:block" />
-            <span className="truncate font-semibold text-ink">{title}</span>
+            <span className="truncate text-base font-semibold text-ink md:text-sm">{title}</span>
           </nav>
 
           <Link href="/" target="_blank" className="hidden items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition hover:border-action hover:text-action lg:inline-flex">
             <Store size={16} /> Voir la boutique
           </Link>
 
-          <button className="relative rounded-lg p-2 text-ink/60 transition hover:bg-canvas hover:text-ink">
+          <button
+            aria-label="Notifications"
+            className="relative flex size-11 shrink-0 items-center justify-center rounded-lg text-ink/60 transition hover:bg-canvas hover:text-ink md:size-auto md:p-2"
+          >
             <Bell size={20} />
-            <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-action"></span>
+            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-action md:top-2 md:right-2"></span>
           </button>
 
-          <div className="relative" ref={menuRef}>
-            <button onClick={() => setMenuOpen((v) => !v)} className="flex items-center gap-2 rounded-lg p-1 pr-2 transition hover:bg-canvas">
+          <div className="relative shrink-0" ref={menuRef}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="Menu du compte"
+              className="flex min-h-11 items-center gap-2 rounded-lg p-1 pr-2 transition hover:bg-canvas md:min-h-0"
+            >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-sm font-bold text-white uppercase">
                 {(() => {
                   const name = (adminName || 'Admin').trim();
@@ -350,12 +386,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </button>
 
             {menuOpen && (
-              <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-line bg-white p-1.5 shadow-lg">
-                <Link href="/admin/settings" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink/80 hover:bg-canvas hover:text-ink">
+              <div className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-1.5rem)] rounded-xl border border-line bg-white p-1.5 shadow-lg">
+                <p className="truncate px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-ink/40 md:hidden">
+                  {adminName}
+                </p>
+                <Link href="/admin/settings" className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink/80 hover:bg-canvas hover:text-ink md:min-h-0">
                   <User size={16} /> Profil
                 </Link>
+                <Link href="/" target="_blank" className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink/80 hover:bg-canvas hover:text-ink lg:hidden">
+                  <Store size={16} /> Voir la boutique
+                </Link>
                 <div className="my-1 border-t border-line" />
-                <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-action hover:bg-action/5">
+                <button onClick={handleLogout} className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-action hover:bg-action/5 md:min-h-0">
                   <LogOut size={16} /> Déconnexion
                 </button>
               </div>
@@ -363,7 +405,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </header>
 
-        <main className="p-4 md:p-8">
+        <main className="min-w-0 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-8">
           <div className="mx-auto max-w-[1400px]">
             {children}
           </div>

@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react';
 import { getSettings, updateSettings, uploadImage } from '@/lib/api';
 import { parseAbout } from '@/lib/about';
-import { 
-  Loader2, Image as ImageIcon, Trash2, ArrowUp, ArrowDown, Plus, 
-  FileText, CheckCircle2, UploadCloud, X 
+import {
+  Loader2, ImageIcon, Trash2, ArrowUp, ArrowDown, Plus,
+  FileText, CheckCircle2, UploadCloud, X
 } from 'lucide-react';
 import AdminGuard from '@/lib/admin-guard';
 
@@ -16,8 +16,7 @@ export default function AdminAboutPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  
-  // État pour afficher l'image en grand
+
   const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
@@ -53,7 +52,7 @@ export default function AdminAboutPage() {
     try {
       const url = await uploadImage(file);
       setImage(url);
-      setPreviewOpen(false); // Ferme la popup après l'upload
+      setPreviewOpen(false);
     } catch {
       setMsg({ ok: false, text: "Échec de l'upload de l'image" });
     } finally {
@@ -80,56 +79,68 @@ export default function AdminAboutPage() {
     }
   };
 
-  const inputCls = "w-full border border-line rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-action bg-white";
+  const inputCls =
+    'min-h-11 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-base text-ink focus:border-action focus:outline-none md:min-h-0 md:text-sm';
 
-  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-action" size={32} /></div>;
+  if (loading) {
+    return (
+      <AdminGuard>
+        <div className="flex justify-center p-8"><Loader2 className="animate-spin text-action" size={32} /></div>
+      </AdminGuard>
+    );
+  }
 
   return (
     <AdminGuard>
-      <div className="max-w-4xl mx-auto">
-        
-        {/* En-tête */}
-        <div className="mb-8 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-action text-white flex items-center justify-center">
-            <FileText size={24} />
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center gap-3 md:mb-8">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-action text-white md:size-12 md:rounded-2xl">
+            <FileText size={20} className="md:hidden" />
+            <FileText size={24} className="hidden md:block" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-ink">À propos</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-ink md:text-2xl">À propos</h1>
             <p className="text-sm text-ink/60">Modifiez le contenu de la page à propos de votre boutique.</p>
           </div>
         </div>
 
-        <div className="space-y-6">
-          
-          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
-              <div className="w-8 h-8 rounded-lg bg-action/10 text-action flex items-center justify-center">
+        <div className="space-y-4 md:space-y-6">
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3 border-b border-line pb-3 md:mb-5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-action/10 text-action">
                 <FileText size={18} />
               </div>
-              <h2 className="text-lg font-bold text-ink">Contenu de la page</h2>
+              <h2 className="text-base font-bold text-ink md:text-lg">Contenu de la page</h2>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-5 md:space-y-6">
               <div>
-                <label className="block text-sm font-semibold mb-1.5 text-ink">Titre de la page</label>
-                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="À propos" className={inputCls} />
+                <label htmlFor="about_title" className="mb-1.5 block text-sm font-semibold text-ink">Titre de la page</label>
+                <input
+                  id="about_title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="À propos"
+                  className={inputCls}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-2 text-ink">Image principale</label>
+                <label className="mb-2 block text-sm font-semibold text-ink">Image principale</label>
                 <div className="w-full sm:w-80">
                   {image ? (
-                    // Si l'image existe : on affiche l'image, et on l'ouvre en grand au clic
-                    <div className="relative group aspect-video rounded-xl overflow-hidden border border-line bg-canvas cursor-pointer" onClick={() => setPreviewOpen(true)}>
-                      <img src={image} alt="Aperçu" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold flex items-center gap-2"><ImageIcon size={18} /> Voir l'image</span>
+                    <div
+                      className="group relative aspect-video cursor-pointer overflow-hidden rounded-xl border border-line bg-canvas"
+                      onClick={() => setPreviewOpen(true)}
+                    >
+                      <img src={image} alt="Aperçu" className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                        <span className="flex items-center gap-2 text-sm font-semibold text-white"><ImageIcon size={18} /> Voir l'image</span>
                       </div>
                     </div>
                   ) : (
-                    // Si pas d'image : on affiche la zone pour uploader
-                    <label className="flex flex-col items-center justify-center aspect-video rounded-xl border-2 border-dashed border-line hover:border-action bg-canvas/30 cursor-pointer transition">
-                      {uploading ? <Loader2 size={24} className="text-action animate-spin mb-2" /> : <ImageIcon size={24} className="text-ink/40 mb-2" />}
+                    <label className="flex aspect-video cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-line bg-canvas/30 transition hover:border-action">
+                      {uploading ? <Loader2 size={24} className="mb-2 animate-spin text-action" /> : <ImageIcon size={24} className="mb-2 text-ink/40" />}
                       <span className="text-sm font-semibold text-ink/60">{uploading ? 'Chargement...' : 'Ajouter une image'}</span>
                       <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
                     </label>
@@ -139,62 +150,89 @@ export default function AdminAboutPage() {
             </div>
           </section>
 
-          {/* ... (La partie Paragraphes reste identique) ... */}
-          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
-              <div className="w-8 h-8 rounded-lg bg-action/10 text-action flex items-center justify-center"><FileText size={18} /></div>
-              <h2 className="text-lg font-bold text-ink">Paragraphes</h2>
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3 border-b border-line pb-3 md:mb-5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-action/10 text-action"><FileText size={18} /></div>
+              <h2 className="text-base font-bold text-ink md:text-lg">Paragraphes</h2>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3 md:space-y-4">
               {paragraphs.map((p, i) => (
-                <div key={i} className="flex gap-3 items-start bg-canvas/30 p-3 rounded-xl border border-line">
-                  <div className="flex flex-col gap-1 mt-1 shrink-0">
-                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 text-ink/40 hover:text-ink disabled:opacity-30"><ArrowUp size={16} /></button>
-                    <button type="button" onClick={() => move(i, 1)} disabled={i === paragraphs.length - 1} className="p-1 text-ink/40 hover:text-ink disabled:opacity-30"><ArrowDown size={16} /></button>
+                <div key={i} className="rounded-xl border border-line bg-canvas/30 p-3">
+                  {/* Sur mobile : boutons en haut à droite */}
+                  <div className="mb-2 flex items-center justify-between gap-2 md:hidden">
+                    <span className="text-xs font-semibold text-ink/50">Paragraphe {i + 1}</span>
+                    <div className="flex items-center gap-1">
+                      <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Monter" className="flex size-9 items-center justify-center rounded-lg text-ink/50 hover:bg-white hover:text-ink disabled:opacity-30">
+                        <ArrowUp size={16} />
+                      </button>
+                      <button type="button" onClick={() => move(i, 1)} disabled={i === paragraphs.length - 1} aria-label="Descendre" className="flex size-9 items-center justify-center rounded-lg text-ink/50 hover:bg-white hover:text-ink disabled:opacity-30">
+                        <ArrowDown size={16} />
+                      </button>
+                      <button type="button" onClick={() => remove(i)} disabled={paragraphs.length === 1} aria-label="Supprimer" className="flex size-9 items-center justify-center rounded-lg bg-action-soft text-action hover:bg-action hover:text-white disabled:opacity-30">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                  <textarea value={p} onChange={(e) => update(i, e.target.value)} placeholder={`Paragraphe ${i + 1}...`} rows={3} className="flex-1 w-full border border-line rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-action bg-white resize-none" />
-                  <button type="button" onClick={() => remove(i)} disabled={paragraphs.length === 1} className="p-2 text-action bg-action-soft hover:bg-action hover:text-white rounded-lg transition disabled:opacity-30 mt-1 shrink-0" title="Supprimer ce paragraphe"><Trash2 size={16} /></button>
+
+                  <div className="flex items-start gap-3">
+                    {/* Flèches desktop */}
+                    <div className="mt-1 hidden shrink-0 flex-col gap-1 md:flex">
+                      <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 text-ink/40 hover:text-ink disabled:opacity-30"><ArrowUp size={16} /></button>
+                      <button type="button" onClick={() => move(i, 1)} disabled={i === paragraphs.length - 1} className="p-1 text-ink/40 hover:text-ink disabled:opacity-30"><ArrowDown size={16} /></button>
+                    </div>
+                    <textarea
+                      value={p}
+                      onChange={(e) => update(i, e.target.value)}
+                      placeholder={`Paragraphe ${i + 1}...`}
+                      rows={3}
+                      className="min-h-24 w-full flex-1 resize-none rounded-lg border border-line bg-white px-3 py-2.5 text-base text-ink focus:border-action focus:outline-none md:min-h-0 md:text-sm"
+                    />
+                    {/* Poubelle desktop */}
+                    <button type="button" onClick={() => remove(i)} disabled={paragraphs.length === 1} className="mt-1 hidden shrink-0 rounded-lg bg-action-soft p-2 text-action transition hover:bg-action hover:text-white disabled:opacity-30 md:block" title="Supprimer ce paragraphe">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
-              <button type="button" onClick={add} className="inline-flex items-center gap-2 text-sm font-semibold text-action hover:text-action-dark transition mt-2"><Plus size={16} /> Ajouter un paragraphe</button>
+              <button type="button" onClick={add} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action transition hover:text-action-dark md:min-h-0">
+                <Plus size={16} /> Ajouter un paragraphe
+              </button>
             </div>
           </section>
 
-          {/* ... (Message et Bouton Enregistrer) ... */}
           {msg && (
-            <div className={`p-4 rounded-xl border flex items-center gap-2 font-medium text-sm ${msg.ok ? 'bg-success-soft border-success/20 text-success' : 'bg-action-soft border-action/20 text-action'}`}>
-              {msg.ok && <CheckCircle2 size={18} />}{msg.text}
+            <div className={`flex items-center gap-2 rounded-xl border p-4 text-sm font-medium ${msg.ok ? 'border-success/20 bg-success-soft text-success' : 'border-action/20 bg-action-soft text-action'}`}>
+              {msg.ok && <CheckCircle2 size={18} className="shrink-0" />}{msg.text}
             </div>
           )}
-          <div className="flex justify-end pt-2">
-            <button onClick={save} disabled={saving} className="bg-action text-white font-bold px-8 py-3 rounded-xl hover:bg-action-dark transition shadow-sm disabled:opacity-50">
+
+          <div className="flex pt-2 md:justify-end">
+            <button onClick={save} disabled={saving} className="min-h-12 w-full rounded-xl bg-action px-8 py-3 font-bold text-white shadow-sm transition hover:bg-action-dark disabled:opacity-50 md:min-h-0 md:w-auto">
               {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
             </button>
           </div>
-
         </div>
       </div>
 
-      {/* MODAL POUR VOIR L'IMAGE EN GRAND */}
       {previewOpen && image && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="relative max-w-3xl w-full">
-            <img src={image} alt="Aperçu en grand" className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
-            
-            <div className="absolute top-4 right-4 flex gap-2">
-              <label className="bg-white text-ink px-4 py-2 rounded-lg font-semibold cursor-pointer hover:bg-gray-100 flex items-center gap-2">
-                <UploadCloud size={18} /> Changer l'image
+          <div className="relative w-full max-w-3xl">
+            <img src={image} alt="Aperçu en grand" className="max-h-[70vh] w-full rounded-lg object-contain md:max-h-[80vh]" />
+
+            <div className="absolute right-3 top-3 flex gap-2 md:right-4 md:top-4">
+              <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-ink hover:bg-gray-100 md:min-h-0 md:px-4">
+                <UploadCloud size={18} /> <span className="hidden sm:inline">Changer l'image</span>
                 <input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="hidden" />
               </label>
-              <button type="button" onClick={() => setPreviewOpen(false)} className="bg-white text-ink p-2 rounded-lg hover:bg-gray-100" title="Fermer">
+              <button type="button" onClick={() => setPreviewOpen(false)} aria-label="Fermer" className="flex size-10 items-center justify-center rounded-lg bg-white text-ink hover:bg-gray-100 md:size-auto md:p-2">
                 <X size={20} />
               </button>
             </div>
-            
-            <button 
-              type="button" 
-              onClick={(e) => { e.preventDefault(); setImage(''); setPreviewOpen(false); }} 
-              className="absolute bottom-4 right-4 bg-action text-white px-4 py-2 rounded-lg font-semibold hover:bg-action-dark flex items-center gap-2"
+
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); setImage(''); setPreviewOpen(false); }}
+              className="absolute bottom-3 right-3 flex min-h-10 items-center gap-2 rounded-lg bg-action px-4 py-2 text-sm font-semibold text-white hover:bg-action-dark md:bottom-4 md:right-4 md:min-h-0"
             >
               <Trash2 size={18} /> Supprimer
             </button>

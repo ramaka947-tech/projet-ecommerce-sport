@@ -18,9 +18,10 @@ export default function SiteChrome({
     return <div className="flex-1">{children}</div>;
   }
 
-  // Boutique : le pb-16 laisse la place à la MobileNav fixe
+  // Boutique : le padding du bas laisse la place à la MobileNav fixe (4rem + zone sûre de l'iPhone).
+  // C'est ICI, et seulement ici, que cet espace est géré : les pages n'ont pas à le refaire.
   return (
-    <div className="flex flex-1 flex-col pb-16 md:pb-0">
+    <div className="flex flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
       {header}
       <div className="flex-1">{children}</div>
       {footer}

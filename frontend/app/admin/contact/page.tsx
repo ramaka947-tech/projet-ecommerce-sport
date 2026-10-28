@@ -5,15 +5,15 @@ import dynamic from 'next/dynamic';
 import AdminGuard from '@/lib/admin-guard';
 import { getSettings, updateSettings } from '@/lib/api';
 import type { Location } from '@/components/LocationPicker';
-import { 
-  Mail, Phone, MessageCircle, MapPin, Loader2, CheckCircle2, 
+import {
+  Mail, Phone, MapPin, Loader2, CheckCircle2,
   Share2, User, ExternalLink
 } from 'lucide-react';
 
 // Leaflet a besoin de `window` : on le charge uniquement côté navigateur
 const LocationPicker = dynamic(() => import('@/components/LocationPicker'), {
   ssr: false,
-  loading: () => <div className="h-64 flex items-center justify-center text-ink/50 text-sm bg-canvas rounded-xl">Chargement de la carte...</div>,
+  loading: () => <div className="h-72 flex items-center justify-center text-ink/50 text-sm bg-canvas rounded-xl md:h-64">Chargement de la carte...</div>,
 });
 
 // Vraies icônes SVG pour les réseaux
@@ -73,6 +73,7 @@ export default function AdminContactPage() {
           lng: s.contact_lng ?? '',
         });
       })
+      .catch(() => setMsg({ ok: false, text: 'Impossible de charger les réglages.' }))
       .finally(() => setLoading(false));
   }, []);
 
@@ -96,39 +97,49 @@ export default function AdminContactPage() {
     }
   };
 
-  const inputCls = "w-full border border-line rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-action bg-white";
-  const labelCls = "block text-sm font-semibold mb-1.5 text-ink flex items-center gap-2";
+  const inputCls =
+    'min-h-11 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-base focus:border-action focus:outline-none md:min-h-0 md:text-sm';
+  const labelCls = 'mb-1.5 flex items-center gap-2 text-sm font-semibold text-ink';
 
-  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-action" size={32} /></div>;
+  if (loading) {
+    return (
+      <AdminGuard>
+        <div className="flex justify-center p-8">
+          <Loader2 className="animate-spin text-action" size={32} />
+        </div>
+      </AdminGuard>
+    );
+  }
 
   return (
     <AdminGuard>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-12 h-12 rounded-2xl bg-action/10 text-action flex items-center justify-center">
+      <div className="mb-6 md:mb-8">
+        <div className="mb-2 flex items-center gap-3">
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-action/10 text-action">
             <MapPin size={24} />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-ink">Contact</h1>
-            <p className="text-sm text-ink/60">Gérez les coordonnées et l'emplacement affichés sur la page contact de votre site.</p>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-ink md:text-2xl">Contact</h1>
+            <p className="text-sm text-ink/60">
+              Gérez les coordonnées et l'emplacement affichés sur la page contact de votre site.
+            </p>
           </div>
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="max-w-6xl space-y-6">
-        
-        <div className="grid lg:grid-cols-2 gap-6">
-          
+      <form onSubmit={handleSave} className="max-w-6xl space-y-4 md:space-y-6">
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
           {/* COLONNE GAUCHE : Coordonnées */}
-          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-ink mb-5 border-b border-line pb-3 flex items-center gap-2">
+          <section className="min-w-0 rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <h2 className="mb-5 flex items-center gap-2 border-b border-line pb-3 text-lg font-bold text-ink">
               <User size={18} className="text-action" /> Coordonnées
             </h2>
-            
+
             <div className="space-y-5">
               <div>
-                <label className={labelCls}>Texte d'introduction</label>
+                <label htmlFor="contact_intro" className={labelCls}>Texte d'introduction</label>
                 <textarea
+                  id="contact_intro"
                   rows={3}
                   value={form.contact_intro}
                   onChange={(e) => setForm({ ...form, contact_intro: e.target.value })}
@@ -138,9 +149,13 @@ export default function AdminContactPage() {
               </div>
 
               <div>
-                <label className={labelCls}><Mail size={14} className="text-ink/40" /> Email</label>
+                <label htmlFor="contact_email" className={labelCls}>
+                  <Mail size={14} className="text-ink/40" /> Email
+                </label>
                 <input
+                  id="contact_email"
                   type="email"
+                  inputMode="email"
                   value={form.contact_email}
                   onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
                   className={inputCls}
@@ -148,8 +163,13 @@ export default function AdminContactPage() {
               </div>
 
               <div>
-                <label className={labelCls}><Phone size={14} className="text-ink/40" /> Téléphone</label>
+                <label htmlFor="contact_phone" className={labelCls}>
+                  <Phone size={14} className="text-ink/40" /> Téléphone
+                </label>
                 <input
+                  id="contact_phone"
+                  type="tel"
+                  inputMode="tel"
                   value={form.contact_phone}
                   onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
                   className={inputCls}
@@ -157,35 +177,35 @@ export default function AdminContactPage() {
               </div>
 
               <div>
-                <label className={labelCls}><WhatsAppIcon /> WhatsApp (avec indicatif)</label>
+                <label htmlFor="social_whatsapp" className={labelCls}>
+                  <WhatsAppIcon /> WhatsApp (avec indicatif)
+                </label>
                 <input
+                  id="social_whatsapp"
+                  inputMode="numeric"
                   value={form.social_whatsapp}
                   onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })}
                   placeholder="Ex : 221781129852"
                   className={inputCls}
                 />
+                <p className="mt-1.5 text-xs text-ink/50">Chiffres uniquement, de 8 à 15.</p>
               </div>
             </div>
           </section>
 
-          {/* COLONNE DROITE : Réseaux Sociaux */}
-          <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-ink mb-5 border-b border-line pb-3 flex items-center gap-2">
+          {/* COLONNE DROITE : Réseaux sociaux */}
+          <section className="min-w-0 rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <h2 className="mb-5 flex items-center gap-2 border-b border-line pb-3 text-lg font-bold text-ink">
               <Share2 size={18} className="text-action" /> Réseaux sociaux
             </h2>
-            
+
             <div className="space-y-5">
               <div>
-                <label className={labelCls}><WhatsAppIcon /> WhatsApp (avec indicatif)</label>
+                <label htmlFor="social_instagram" className={labelCls}><InstaIcon /> Instagram</label>
                 <input
-                  value={form.social_whatsapp}
-                  onChange={(e) => setForm({ ...form, social_whatsapp: e.target.value })}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}><InstaIcon /> Instagram</label>
-                <input
+                  id="social_instagram"
+                  type="url"
+                  inputMode="url"
                   value={form.social_instagram}
                   onChange={(e) => setForm({ ...form, social_instagram: e.target.value })}
                   placeholder="https://instagram.com/..."
@@ -193,8 +213,11 @@ export default function AdminContactPage() {
                 />
               </div>
               <div>
-                <label className={labelCls}><FbIcon /> Facebook</label>
+                <label htmlFor="social_facebook" className={labelCls}><FbIcon /> Facebook</label>
                 <input
+                  id="social_facebook"
+                  type="url"
+                  inputMode="url"
                   value={form.social_facebook}
                   onChange={(e) => setForm({ ...form, social_facebook: e.target.value })}
                   placeholder="https://facebook.com/..."
@@ -202,8 +225,11 @@ export default function AdminContactPage() {
                 />
               </div>
               <div>
-                <label className={labelCls}><TiktokIcon /> TikTok</label>
+                <label htmlFor="social_tiktok" className={labelCls}><TiktokIcon /> TikTok</label>
                 <input
+                  id="social_tiktok"
+                  type="url"
+                  inputMode="url"
                   value={form.social_tiktok}
                   onChange={(e) => setForm({ ...form, social_tiktok: e.target.value })}
                   placeholder="https://tiktok.com/@..."
@@ -215,26 +241,27 @@ export default function AdminContactPage() {
         </div>
 
         {/* Localisation (pleine largeur en bas) */}
-        <section className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-ink mb-5 border-b border-line pb-3 flex items-center gap-2">
+        <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+          <h2 className="mb-5 flex items-center gap-2 border-b border-line pb-3 text-lg font-bold text-ink">
             <MapPin size={18} className="text-action" /> Emplacement de la boutique
           </h2>
-          
+
           <div className="space-y-4">
-            <div className="rounded-xl overflow-hidden border border-line h-64">
+            <div className="h-72 overflow-hidden rounded-xl border border-line md:h-64">
               <LocationPicker value={location} onChange={setLocation} />
             </div>
-            
-            {/* Affichage de l'adresse enregistrée en bas de la carte */}
+
+            {/* Adresse enregistrée sous la carte */}
             {location.address && (
-              <div className="flex items-center gap-3 p-4 bg-canvas/50 border border-line rounded-xl text-sm text-ink">
-                <MapPin size={18} className="text-action shrink-0" />
-                <p className="flex-1">{location.address}</p>
-                <a 
-                  href={`https://www.google.com/maps?q=${location.lat},${location.lng}`} 
-                  target="_blank" 
+              <div className="flex items-center gap-3 rounded-xl border border-line bg-canvas/50 p-3 text-sm text-ink md:p-4">
+                <MapPin size={18} className="shrink-0 text-action" />
+                <p className="min-w-0 flex-1 break-words">{location.address}</p>
+                <a
+                  href={`https://www.google.com/maps?q=${location.lat},${location.lng}`}
+                  target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 hover:bg-white rounded-lg transition"
+                  aria-label="Voir sur Google Maps"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-lg transition hover:bg-white md:size-auto md:p-2"
                   title="Voir sur Google Maps"
                 >
                   <ExternalLink size={18} />
@@ -244,19 +271,26 @@ export default function AdminContactPage() {
           </div>
         </section>
 
-        {/* Messages d'état & Bouton Enregistrer */}
+        {/* Message d'état & bouton Enregistrer */}
         {msg && (
-          <div className={`p-4 rounded-xl border flex items-center gap-2 font-medium text-sm ${msg.ok ? 'bg-success-soft border-success/20 text-success' : 'bg-action-soft border-action/20 text-action'}`}>
-            {msg.ok && <CheckCircle2 size={18} />}
+          <div
+            role="status"
+            className={`flex items-center gap-2 rounded-xl border p-4 text-sm font-medium ${
+              msg.ok
+                ? 'border-success/20 bg-success-soft text-success'
+                : 'border-action/20 bg-action-soft text-action'
+            }`}
+          >
+            {msg.ok && <CheckCircle2 size={18} className="shrink-0" />}
             {msg.text}
           </div>
         )}
 
-        <div className="flex justify-end pt-2">
+        <div className="flex pt-2 md:justify-end">
           <button
             type="submit"
             disabled={saving}
-            className="bg-action text-white font-bold px-8 py-3 rounded-xl hover:bg-action-dark transition shadow-sm disabled:opacity-50"
+            className="min-h-12 w-full rounded-xl bg-action px-8 py-3 font-bold text-white shadow-sm transition hover:bg-action-dark disabled:opacity-50 md:min-h-0 md:w-auto"
           >
             {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>

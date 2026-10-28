@@ -9,13 +9,10 @@ import { createProduct, createCategory, getAdminProducts, uploadImage as apiUplo
 /* ----------------------------- Helpers ----------------------------- */
 const isUrl = (s: string) => /^https?:\/\//i.test(s);
 const normName = (s: string) => s.normalize('NFC').toLowerCase().trim();
-// "D:\\Téléchargements\\Photo1.JPG" -> "photo1.jpg"
 const baseName = (s: string) => normName(s.split(/[\\/]/).pop() || '');
 const splitList = (v: any): string[] =>
   v ? String(v).split(/[,;]/).map((s) => s.trim()).filter(Boolean) : [];
 
-// Les noms de fichiers peuvent contenir des virgules ("Corde à sauter, Jump rope.jpg").
-// On coupe donc uniquement APRÈS une extension d'image.
 const IMG_EXT = /\.(jpe?g|png|webp|gif|avif|bmp)/i;
 const splitImages = (v: any): string[] => {
   if (!v) return [];
@@ -28,7 +25,6 @@ const splitImages = (v: any): string[] => {
 const getImageTokens = (row: any): string[] =>
   splitImages(row['Images'] ?? row['Images (liens séparés par virgule)']);
 
-// Réduit les grosses photos (max 1600px) pour un upload rapide
 async function compress(file: File): Promise<Blob> {
   try {
     const bmp = await createImageBitmap(file);
@@ -47,14 +43,12 @@ async function compress(file: File): Promise<Blob> {
   }
 }
 
-// Compresse la photo, puis l'envoie via ton backend (/upload -> Cloudinary)
 async function uploadImage(file: File): Promise<string> {
   const blob = await compress(file);
   const toSend = new File([blob], file.name, { type: blob.type || file.type });
   return apiUploadImage(toSend);
 }
 
-// Exécute N tâches en parallèle maximum
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
   let i = 0;
   await Promise.all(
@@ -93,14 +87,12 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     setProgress({ done: 0, total: 0, label: '' });
   };
 
-  /* --- Fichiers images indexés par nom (insensible à la casse) --- */
   const fileMap = useMemo(() => {
     const m = new Map<string, File>();
     imageFiles.forEach((f) => m.set(normName(f.name), f));
     return m;
   }, [imageFiles]);
 
-  /* --- Analyse : quelles images sont trouvées / manquantes --- */
   const analysis = useMemo(() => {
     const missing = new Set<string>();
     const unknownCats = new Set<string>();
@@ -118,7 +110,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     return { rows, missing: Array.from(missing), unknownCats: Array.from(unknownCats) };
   }, [importedData, fileMap, categories]);
 
-  /* ------------------------ Modèle & export ------------------------ */
   const downloadTemplate = () => {
     const ws = XLSX.utils.json_to_sheet([
       {
@@ -130,7 +121,7 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Modèle');
-    XLSX.writeFile(wb, 'modele_produits_sportpro.xlsx');
+    XLSX.writeFile(wb, 'modele_produits_ad-sport-solutions.xlsx');
   };
 
   const handleExport = async () => {
@@ -146,7 +137,7 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
       const ws = XLSX.utils.json_to_sheet(excelData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Produits');
-      XLSX.writeFile(wb, `export_produits_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(wb, `ad-sport-solutions_produits_${new Date().toISOString().split('T')[0]}.xlsx`);
       showToast('success', 'Export terminé.');
     } catch {
       showToast('error', "Erreur lors de l'exportation.");
@@ -155,7 +146,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     }
   };
 
-  /* --------------------------- Lecture Excel ----------------------- */
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -175,7 +165,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
   const handleImagesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
-    // On cumule (permet d'ajouter plusieurs lots)
     setImageFiles((prev) => {
       const m = new Map(prev.map((f) => [normName(f.name), f]));
       files.forEach((f) => m.set(normName(f.name), f));
@@ -183,7 +172,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     });
   };
 
-  /* ----------------------------- Import ---------------------------- */
   const handleConfirmImport = async () => {
     const needsFiles = importedData.some((r) => getImageTokens(r).some((t) => !isUrl(t)));
     if (needsFiles && imageFiles.length === 0) {
@@ -192,18 +180,16 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
     }
     setImporting(true);
     const urlCache = new Map<string, string>();
-    const failedUploads = new Map<string, string>(); // nom -> message d'erreur
+    const failedUploads = new Map<string, string>();
 
     try {
-      // 1. Images à envoyer (uniques, et réellement présentes)
       const names = Array.from(
         new Set(importedData.flatMap((r) => getImageTokens(r).filter((t) => !isUrl(t)).map(baseName)))
       ).filter((n) => fileMap.has(n));
 
-      // Catégories : celles qui existent déjà ne sont jamais modifiées, seules les manquantes seront créées
       const catMap = new Map<string, string>();
       categories.forEach((c) => catMap.set(String(c.name).trim().toLowerCase(), c.id));
-      const newCats = new Map<string, string>(); // clé minuscule -> nom d'origine
+      const newCats = new Map<string, string>();
       importedData.forEach((r) => {
         const n = String(r['Catégorie'] ?? '').trim();
         if (n && !catMap.has(n.toLowerCase())) newCats.set(n.toLowerCase(), n);
@@ -225,7 +211,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
         bump('Envoi des images…');
       });
 
-      // 2. Création des catégories manquantes
       for (const [key, name] of newCats) {
         try {
           const created: any = await createCategory({ name });
@@ -238,7 +223,6 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
         bump('Création des catégories…');
       }
 
-      // 3. Création des produits
       let ok = 0;
       let noImage = 0;
       const errors: string[] = [];
@@ -298,69 +282,69 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
 
       <button
         onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 border border-line bg-white text-ink font-semibold px-5 py-2.5 rounded-lg hover:border-action transition shadow-sm"
+        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-5 font-semibold text-ink shadow-sm transition hover:border-action sm:w-auto md:min-h-0 md:py-2.5"
       >
         <FileSpreadsheet size={18} /> Importer / Exporter
       </button>
 
-      {/* ------------------------------ TOAST ------------------------------ */}
+      {/* Toast */}
       {toast && (
         <div
           role="status"
           style={{ animation: 'toast-in .25s ease-out' }}
-          className={`fixed bottom-6 right-6 z-[60] max-w-sm flex items-start gap-3 rounded-xl border px-4 py-3 shadow-lg bg-white ${
+          className={`fixed bottom-4 left-4 right-4 z-[60] flex items-start gap-3 rounded-xl border bg-white px-4 py-3 shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:max-w-sm ${
             toast.type === 'success' ? 'border-success/40 text-success' : 'border-action/40 text-action'
           }`}
         >
-          {toast.type === 'success' ? <CheckCircle2 size={20} className="shrink-0 mt-0.5" /> : <AlertTriangle size={20} className="shrink-0 mt-0.5" />}
-          <p className="text-sm font-medium text-ink">{toast.text}</p>
-          <button onClick={() => setToast(null)} className="text-ink/40 hover:text-ink"><X size={16} /></button>
+          {toast.type === 'success' ? <CheckCircle2 size={20} className="mt-0.5 shrink-0" /> : <AlertTriangle size={20} className="mt-0.5 shrink-0" />}
+          <p className="min-w-0 flex-1 text-sm font-medium text-ink">{toast.text}</p>
+          <button onClick={() => setToast(null)} aria-label="Fermer" className="shrink-0 text-ink/40 hover:text-ink"><X size={16} /></button>
         </div>
       )}
 
-      {/* ------------------------------ MODALE ----------------------------- */}
+      {/* Modale */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-4 sm:p-8 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden relative">
-            <div className="flex items-center justify-between p-5 border-b border-line bg-canvas/30 shrink-0">
-              <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 p-3 backdrop-blur-sm sm:p-8">
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl sm:max-h-[85vh]">
+            <div className="flex shrink-0 items-center justify-between border-b border-line bg-canvas/30 p-4 sm:p-5">
+              <h2 className="flex items-center gap-2 text-lg font-bold text-ink sm:text-xl">
                 <FileSpreadsheet className="text-action" /> Gestion Excel
               </h2>
-              <button onClick={resetAndClose} disabled={importing} className="text-ink/50 hover:text-action disabled:opacity-30">
+              <button onClick={resetAndClose} disabled={importing} aria-label="Fermer" className="flex size-10 items-center justify-center rounded-lg text-ink/50 hover:text-action disabled:opacity-30">
                 <X size={24} />
               </button>
             </div>
 
-            <div className="p-6 overflow-y-auto">
+            <div className="overflow-y-auto p-4 sm:p-6">
               {step === 'choice' ? (
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="border border-line rounded-xl p-5 text-center flex flex-col justify-between">
+                <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+                  <div className="flex flex-col justify-between rounded-xl border border-line p-4 text-center sm:p-5">
                     <div>
-                      <div className="w-12 h-12 bg-action/10 text-action rounded-full flex items-center justify-center mx-auto mb-4"><Upload size={24} /></div>
-                      <h3 className="font-bold text-ink mb-2">Importer des produits</h3>
-                      <p className="text-xs text-ink/60 mb-4">
+                      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-action/10 text-action"><Upload size={24} /></div>
+                      <h3 className="mb-2 font-bold text-ink">Importer des produits</h3>
+                      <p className="mb-4 text-xs text-ink/60">
                         Dans la colonne « Images », mettez des noms de fichiers (photo1.jpg) ou des liens https.
                         Vous sélectionnerez ensuite les photos de votre ordinateur.
                       </p>
                     </div>
                     <div>
-                      <button onClick={downloadTemplate} className="text-sm text-action font-semibold hover:underline flex items-center justify-center gap-1 w-full mb-4">
+                      <button onClick={downloadTemplate} className="mb-4 flex w-full items-center justify-center gap-1 text-sm font-semibold text-action hover:underline">
                         <Download size={14} /> Télécharger le modèle Excel
                       </button>
-                      <label className="w-full inline-block bg-ink text-white font-semibold px-4 py-2 rounded-lg cursor-pointer hover:bg-ink/90 transition">
+                      <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-ink px-4 font-semibold text-white transition hover:bg-ink/90">
                         Choisir le fichier Excel
                         <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
                       </label>
                     </div>
                   </div>
 
-                  <div className="border border-line rounded-xl p-5 text-center flex flex-col justify-between">
+                  <div className="flex flex-col justify-between rounded-xl border border-line p-4 text-center sm:p-5">
                     <div>
-                      <div className="w-12 h-12 bg-success/10 text-success rounded-full flex items-center justify-center mx-auto mb-4"><Download size={24} /></div>
-                      <h3 className="font-bold text-ink mb-2">Exporter le catalogue</h3>
-                      <p className="text-xs text-ink/60 mb-4">Téléchargez vos produits avec les liens des images.</p>
+                      <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-success/10 text-success"><Download size={24} /></div>
+                      <h3 className="mb-2 font-bold text-ink">Exporter le catalogue</h3>
+                      <p className="mb-4 text-xs text-ink/60">Téléchargez vos produits avec les liens des images.</p>
                     </div>
-                    <button onClick={handleExport} disabled={exporting} className="w-full inline-flex justify-center items-center gap-2 border border-line text-ink font-semibold px-4 py-2 rounded-lg hover:border-action transition disabled:opacity-50">
+                    <button onClick={handleExport} disabled={exporting} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line px-4 font-semibold text-ink transition hover:border-action disabled:opacity-50">
                       {exporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                       {exporting ? 'Exportation...' : 'Exporter les produits'}
                     </button>
@@ -368,31 +352,31 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
                 </div>
               ) : (
                 <div>
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                     <h3 className="font-bold text-ink">Prévisualisation ({importedData.length} lignes)</h3>
-                    <button onClick={() => { setStep('choice'); setImportedData([]); }} disabled={importing} className="text-sm text-ink/50 hover:text-ink underline">
+                    <button onClick={() => { setStep('choice'); setImportedData([]); }} disabled={importing} className="text-sm text-ink/50 underline hover:text-ink">
                       Changer de fichier
                     </button>
                   </div>
 
-                  {/* Sélecteur d'images locales */}
-                  <div className="mb-4 p-4 border border-dashed border-line rounded-xl bg-canvas/30 flex items-center justify-between gap-4">
-                    <div className="text-sm">
-                      <p className="font-semibold text-ink flex items-center gap-2"><ImagePlus size={16} className="text-action" /> Photos des produits</p>
-                      <p className="text-xs text-ink/60 mt-0.5">
+                  {/* Sélecteur d'images */}
+                  <div className="mb-4 flex flex-col gap-3 rounded-xl border border-dashed border-line bg-canvas/30 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+                    <div className="min-w-0 text-sm">
+                      <p className="flex items-center gap-2 font-semibold text-ink"><ImagePlus size={16} className="text-action" /> Photos des produits</p>
+                      <p className="mt-0.5 text-xs text-ink/60">
                         {imageFiles.length > 0
                           ? `${imageFiles.length} image(s) sélectionnée(s)`
-                          : 'Ouvrez votre dossier d\'images, faites Ctrl+A, puis validez.'}
+                          : "Ouvrez votre dossier d'images, faites Ctrl+A, puis validez."}
                       </p>
                     </div>
-                    <label className="shrink-0 border border-line bg-white text-ink text-sm font-semibold px-4 py-2 rounded-lg cursor-pointer hover:border-action transition">
+                    <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-line bg-white px-4 text-sm font-semibold text-ink transition hover:border-action">
                       {imageFiles.length > 0 ? 'Ajouter' : 'Choisir les images'}
                       <input type="file" accept="image/*" multiple onChange={handleImagesSelected} className="hidden" />
                     </label>
                   </div>
 
                   {analysis.unknownCats.length > 0 && (
-                    <div className="mb-4 p-3 bg-canvas/60 border border-line rounded-lg text-xs text-ink/80 flex gap-2">
+                    <div className="mb-4 flex gap-2 rounded-lg border border-line bg-canvas/60 p-3 text-xs text-ink/80">
                       <FolderPlus size={16} className="shrink-0 text-action" />
                       <p>
                         Ces catégories n'existent pas encore et seront <span className="font-semibold">créées automatiquement</span> :{' '}
@@ -403,7 +387,7 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
                   )}
 
                   {imageFiles.length > 0 && analysis.missing.length > 0 && (
-                    <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex gap-2">
+                    <div className="mb-4 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                       <AlertTriangle size={16} className="shrink-0" />
                       <p>
                         {analysis.missing.length} image(s) du fichier Excel ne figurent pas dans vos photos sélectionnées :{' '}
@@ -413,13 +397,15 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
                     </div>
                   )}
 
-                  <div className="max-h-60 overflow-y-auto border border-line rounded-lg">
-                    <table className="w-full text-left text-sm whitespace-nowrap">
-                      <thead className="bg-canvas/50 sticky top-0">
+                  <div className="max-h-60 overflow-auto rounded-lg border border-line">
+                    <table className="w-full whitespace-nowrap text-left text-xs sm:text-sm">
+                      <thead className="sticky top-0 bg-canvas/50">
                         <tr>
-                          <th className="px-4 py-2">Nom</th><th className="px-4 py-2">SKU</th>
-                          <th className="px-4 py-2">Prix</th><th className="px-4 py-2">Stock</th>
-                          <th className="px-4 py-2">Images</th>
+                          <th className="px-2 py-2 sm:px-4">Nom</th>
+                          <th className="px-2 py-2 sm:px-4">SKU</th>
+                          <th className="px-2 py-2 sm:px-4">Prix</th>
+                          <th className="px-2 py-2 sm:px-4">Stock</th>
+                          <th className="px-2 py-2 sm:px-4">Images</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-line">
@@ -428,11 +414,11 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
                           const complete = a.found === a.total;
                           return (
                             <tr key={i} className="hover:bg-canvas/30">
-                              <td className="px-4 py-2">{row['Nom']}</td>
-                              <td className="px-4 py-2">{row['SKU']}</td>
-                              <td className="px-4 py-2">{row['Prix']}</td>
-                              <td className="px-4 py-2">{row['Stock']}</td>
-                              <td className={`px-4 py-2 font-medium ${a.total === 0 ? 'text-ink/30' : complete ? 'text-success' : 'text-amber-600'}`}>
+                              <td className="px-2 py-2 sm:px-4">{row['Nom']}</td>
+                              <td className="px-2 py-2 sm:px-4">{row['SKU']}</td>
+                              <td className="px-2 py-2 sm:px-4">{row['Prix']}</td>
+                              <td className="px-2 py-2 sm:px-4">{row['Stock']}</td>
+                              <td className={`px-2 py-2 font-medium sm:px-4 ${a.total === 0 ? 'text-ink/30' : complete ? 'text-success' : 'text-amber-600'}`}>
                                 {a.total === 0 ? '—' : `${a.found}/${a.total}`}
                               </td>
                             </tr>
@@ -444,18 +430,21 @@ export default function ProductImportExport({ categories, onSuccess }: { categor
 
                   {importing && (
                     <div className="mt-4">
-                      <div className="flex justify-between text-xs text-ink/60 mb-1">
-                        <span>{progress.label}</span><span>{progress.done}/{progress.total}</span>
+                      <div className="mb-1 flex justify-between text-xs text-ink/60">
+                        <span className="min-w-0 truncate">{progress.label}</span>
+                        <span className="shrink-0">{progress.done}/{progress.total}</span>
                       </div>
-                      <div className="h-2 bg-line rounded-full overflow-hidden">
+                      <div className="h-2 overflow-hidden rounded-full bg-line">
                         <div className="h-full bg-action transition-all" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                   )}
 
-                  <div className="mt-6 flex justify-end gap-3">
-                    <button onClick={resetAndClose} disabled={importing} className="px-5 py-2.5 text-sm font-semibold text-ink/60 hover:text-ink disabled:opacity-30">Annuler</button>
-                    <button onClick={handleConfirmImport} disabled={importing} className="bg-action text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-action-dark transition flex items-center gap-2 disabled:opacity-60">
+                  <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                    <button onClick={resetAndClose} disabled={importing} className="min-h-11 rounded-lg px-5 text-sm font-semibold text-ink/60 hover:text-ink disabled:opacity-30 sm:min-h-0 sm:py-2.5">
+                      Annuler
+                    </button>
+                    <button onClick={handleConfirmImport} disabled={importing} className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-action px-6 text-sm font-semibold text-white transition hover:bg-action-dark disabled:opacity-60 sm:min-h-0 sm:py-2.5">
                       {importing ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
                       {importing ? 'Importation...' : "Confirmer l'importation"}
                     </button>

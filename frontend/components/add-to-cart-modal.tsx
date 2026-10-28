@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { createPortal } from 'react-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Minus, Plus, ShoppingCart, Star, X } from 'lucide-react';
 import { useCart } from '@/lib/cart-context';
@@ -69,11 +70,11 @@ function Stepper({
         onClick={() => onChange(value - 1)}
         disabled={value <= 1}
         aria-label="Diminuer la quantité"
-        className="w-10 h-10 flex items-center justify-center hover:text-action disabled:opacity-30"
+        className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center hover:text-action disabled:opacity-30"
       >
         <Minus size={16} />
       </button>
-      <span className="w-10 text-center text-sm font-semibold" aria-live="polite">
+      <span className="w-9 sm:w-10 text-center text-sm font-semibold" aria-live="polite">
         {value}
       </span>
       <button
@@ -81,7 +82,7 @@ function Stepper({
         onClick={() => onChange(value + 1)}
         disabled={value >= max}
         aria-label="Augmenter la quantité"
-        className="w-10 h-10 flex items-center justify-center hover:text-action disabled:opacity-30"
+        className="w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center hover:text-action disabled:opacity-30"
       >
         <Plus size={16} />
       </button>
@@ -219,41 +220,44 @@ export default function AddToCartModal({
   }
 
   const sizeChip = (active: boolean) =>
-    `min-w-[3.5rem] px-5 py-2.5 rounded-full text-sm font-medium border transition ${
+    `min-w-14 px-4 sm:px-5 py-3 sm:py-2.5 rounded-full text-sm font-medium border transition ${
       active
         ? 'bg-action text-white border-action'
         : 'bg-white text-ink border-line hover:border-action'
     }`;
 
+  // text-base (16 px) sur mobile : en dessous, iOS zoome la page au focus et la fenêtre paraît coupée.
   const inputClass =
-    'w-full border border-line rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:border-action';
+    'w-full border border-line rounded-xl px-4 py-3 text-base sm:text-sm bg-white focus:outline-none focus:border-action';
 
   const required = <span className="text-action">*</span>;
 
-  return (
+  const modal = (
+    // z-60 : au-dessus du header (z-40) et de la barre de navigation mobile (z-50).
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
+      className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`Ajouter ${product.name} au panier`}
-        className="relative w-full sm:max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden"
+        // dvh = hauteur réellement visible (barre d'adresse du navigateur mobile exclue).
+        className="relative w-full sm:max-w-2xl bg-white rounded-t-3xl sm:rounded-3xl max-h-[92dvh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Fermer"
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full hover:bg-canvas flex items-center justify-center text-ink"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-11 h-11 sm:w-9 sm:h-9 rounded-full bg-white/90 sm:bg-transparent hover:bg-canvas flex items-center justify-center text-ink"
         >
           <X size={22} />
         </button>
 
         {addedCount > 0 ? (
           /* ---------- Confirmation ---------- */
-          <div className="p-8 text-center">
+          <div className="p-8 pb-[max(2rem,env(safe-area-inset-bottom))] text-center">
             <div className="mx-auto w-14 h-14 rounded-full bg-[#E7F8EF] text-[#009F5A] flex items-center justify-center">
               <Check size={28} />
             </div>
@@ -264,13 +268,13 @@ export default function AddToCartModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 border border-line rounded-xl py-3 text-sm font-semibold hover:bg-canvas"
+                className="flex-1 border border-line rounded-xl py-3.5 text-sm font-semibold hover:bg-canvas"
               >
                 Continuer mes achats
               </button>
               <Link
                 href="/panier"
-                className="flex-1 text-center bg-action hover:bg-[#B8141F] text-white rounded-xl py-3 text-sm font-semibold transition-colors"
+                className="flex-1 text-center bg-action hover:bg-[#B8141F] text-white rounded-xl py-3.5 text-sm font-semibold transition-colors"
               >
                 Voir le panier
               </Link>
@@ -279,18 +283,18 @@ export default function AddToCartModal({
         ) : (
           <>
             {/* ---------- Contenu défilant ---------- */}
-            <div className="overflow-y-auto p-6 sm:p-8 space-y-7">
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-8 space-y-5 sm:space-y-7">
               {/* En-tête produit */}
-              <div className="flex gap-5 pb-6 border-b border-line">
+              <div className="flex gap-4 sm:gap-5 pb-5 sm:pb-6 border-b border-line">
                 {product.images?.[0] && (
                   <img
                     src={product.images[0]}
                     alt={product.name}
-                    className="block self-start shrink-0 w-auto h-auto max-w-[7rem] max-h-36 sm:max-w-[10rem] sm:max-h-48 rounded-2xl"
+                    className="block self-start shrink-0 w-auto h-auto max-w-24 max-h-28 sm:max-w-40 sm:max-h-48 rounded-2xl"
                   />
                 )}
-                <div className="min-w-0 pr-8">
-                  <h2 className="text-xl sm:text-2xl font-bold text-ink leading-tight line-clamp-2">
+                <div className="min-w-0 pr-10 sm:pr-8">
+                  <h2 className="text-lg sm:text-2xl font-bold text-ink leading-tight line-clamp-2">
                     {product.name}
                   </h2>
                   <p className="mt-1.5 text-xl sm:text-2xl font-bold text-action">
@@ -329,7 +333,7 @@ export default function AddToCartModal({
                     )}
                   </p>
                   {colors.length > 0 ? (
-                    <div className="flex flex-wrap gap-x-4 gap-y-3">
+                    <div className="flex flex-wrap gap-x-3 sm:gap-x-4 gap-y-3">
                       {colors.map((c) => {
                         const hex = hexOf(c);
                         const active = pickedColors.includes(c);
@@ -414,7 +418,7 @@ export default function AddToCartModal({
                       return (
                         <div
                           key={c || 'all'}
-                          className={`border rounded-2xl p-4 transition ${
+                          className={`border rounded-2xl p-3 sm:p-4 transition ${
                             picked.length > 0 ? 'border-action' : 'border-line'
                           }`}
                         >
@@ -528,13 +532,13 @@ export default function AddToCartModal({
               </div>
             </div>
 
-            {/* ---------- Pied fixe : bouton ---------- */}
-            <div className="border-t border-line p-4 sm:px-8 sm:py-5 bg-white">
+            {/* ---------- Pied fixe : bouton (toujours visible, au-dessus de la barre iPhone) ---------- */}
+            <div className="shrink-0 border-t border-line p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 sm:py-5 bg-white">
               {error && <p className="mb-3 text-sm text-[#FF4545]">{error}</p>}
               <button
                 type="button"
                 onClick={submit}
-                className="w-full bg-action hover:bg-[#B8141F] text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2.5"
+                className="w-full bg-action hover:bg-[#B8141F] text-white font-semibold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2.5 active:scale-[0.99]"
               >
                 <ShoppingCart size={20} />
                 Ajouter au panier
@@ -546,4 +550,9 @@ export default function AddToCartModal({
       </div>
     </div>
   );
+
+  // Portail : la fenêtre est rendue dans <body>, hors de la carte produit. Un parent avec
+  // transform/overflow (ex. `active:scale-95`) peut sinon la couper ou décaler son `fixed`.
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
 }

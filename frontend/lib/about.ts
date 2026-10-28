@@ -9,7 +9,7 @@ export type AboutData = {
 export const DEFAULT_ABOUT: AboutData = {
   title: 'À propos',
   paragraphs: [
-    "SportPro est votre boutique en ligne spécialisée dans les articles de sport : maillots, chaussures, ballons, équipements de musculation et bien plus.",
+    "AD Sport Solutions est votre boutique en ligne spécialisée dans les articles de sport : maillots, chaussures, ballons, équipements de musculation et bien plus.",
     "Notre objectif : rendre le sport accessible à tous, avec des produits de qualité et une livraison rapide.",
   ],
   image: "", // <-- Ajouté

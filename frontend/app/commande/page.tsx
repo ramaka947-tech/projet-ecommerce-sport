@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
+  ChevronDown,
   CreditCard,
   Home,
   Lock,
@@ -29,16 +30,23 @@ import {
   validatePhone,
 } from '@/lib/countries';
 import { REGIONS_SENEGAL, getMyLocation, matchRegion } from '@/lib/geo';
-import BackButton from '../panier/back-button';
+import BackButton from '@/components/back-button';
+
+// Cloudinary : format et qualité automatiques, largeur limitée
+function cld(src: string, w: number) {
+  return src.includes('/upload/')
+    ? src.replace('/upload/', `/upload/f_auto,q_auto,c_limit,w_${w}/`)
+    : src;
+}
 
 // Fonction pour afficher les logos côté client
 const getPaymentLogo = (name: string) => {
   const n = name.toLowerCase();
   if (n.includes('wave')) {
-    return <img src="/wave.png" alt="Wave" className="w-8 h-8 rounded-md object-cover" />;
+    return <img src="/wave.png" alt="Wave" className="size-8 rounded-md object-cover" />;
   }
   if (n.includes('orange')) {
-    return <img src="/orange.png" alt="Orange Money" className="w-8 h-8 rounded-md object-cover" />;
+    return <img src="/orange.png" alt="Orange Money" className="size-8 rounded-md object-cover" />;
   }
   return <Wallet size={24} className="text-ink/40" />;
 };
@@ -50,8 +58,9 @@ function getItemImage(item: any): string {
   return typeof candidate === 'string' ? candidate : candidate.url ?? '';
 }
 
+// 16 px sur mobile pour éviter le zoom automatique d'iOS
 const inputClass =
-  'w-full border border-line rounded-xl px-4 py-3 text-sm bg-white text-ink focus:outline-none focus:border-action';
+  'w-full border border-line rounded-xl px-4 py-3 text-base md:text-sm bg-white text-ink focus:outline-none focus:border-action';
 const iconInputClass = `${inputClass} pl-11`;
 
 function Field({ label, htmlFor, required, className = '', children }: { label: string; htmlFor: string; required?: boolean; className?: string; children: React.ReactNode; }) {
@@ -77,7 +86,7 @@ function WithIcon({ icon: Icon, top = false, children }: { icon: any; top?: bool
 function SectionTitle({ n, icon: Icon, title }: { n: number; icon: any; title: string }) {
   return (
     <div className="flex items-center gap-3">
-      <span className="w-7 h-7 rounded-full bg-action text-white text-sm font-bold flex items-center justify-center">{n}</span>
+      <span className="size-7 shrink-0 rounded-full bg-action text-white text-sm font-bold flex items-center justify-center">{n}</span>
       <Icon size={20} className="text-ink/70" />
       <h2 className="font-bold text-ink">{title}</h2>
     </div>
@@ -85,7 +94,7 @@ function SectionTitle({ n, icon: Icon, title }: { n: number; icon: any; title: s
 }
 
 export default function CheckoutPage() {
-  const { items, subtotal, clearCart } = useCart();
+  const { items, loaded, subtotal, clearCart } = useCart();
   const { customer } = useCustomerAuth();
   const router = useRouter();
   const { formatPrice } = useCurrency();
@@ -112,6 +121,8 @@ export default function CheckoutPage() {
   const [geoInfo, setGeoInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [summaryOpen, setSummaryOpen] = useState(false); // récapitulatif déplié (mobile)
+  const [done, setDone] = useState(false); // commande envoyée, redirection en cours
 
   const prefillDone = useRef(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -148,16 +159,44 @@ export default function CheckoutPage() {
     setPrefilled(true);
   }, [customer]);
 
+  // Évite d'afficher « panier vide » pendant la redirection (réseau lent)
+  if (done) {
+    return (
+      <main className="bg-canvas text-ink md:min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 text-center">
+          <p className="text-lg font-semibold">Commande enregistrée</p>
+          <p className="mt-1 text-ink/70 md:text-ink/60">Redirection en cours…</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Panier en cours de lecture sur l'appareil : on n'affiche pas « panier vide » à tort
+  if (!loaded) {
+    return (
+      <main className="bg-canvas text-ink md:min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-8">
+          <BackButton fallback="/panier" />
+          <h1 className="mt-4 md:mt-5 text-2xl sm:text-4xl font-bold">Finaliser la commande</h1>
+          <div role="status" aria-busy="true" aria-label="Chargement de la commande" className="mt-4 md:mt-6 space-y-3">
+            <div className="h-16 animate-pulse rounded-2xl bg-line/60" />
+            <div className="h-64 animate-pulse rounded-2xl bg-line/60" />
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (items.length === 0) {
     return (
-      <main className="min-h-screen bg-canvas text-ink">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-          <BackButton />
-          <h1 className="mt-5 text-3xl sm:text-4xl font-bold">Commande</h1>
-          <div className="mt-8 bg-white rounded-2xl border border-line p-12 text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-canvas text-ink/40 flex items-center justify-center"><ShoppingCart size={30} /></div>
-            <p className="mt-5 font-semibold text-xl">Votre panier est vide</p>
-            <Link href="/boutique" className="mt-7 inline-block bg-action hover:bg-action-dark text-white font-semibold px-8 py-3.5 rounded-xl transition-colors">Voir la boutique</Link>
+      <main className="bg-canvas text-ink md:min-h-screen">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-8">
+          <BackButton fallback="/panier" />
+          <h1 className="mt-4 md:mt-5 text-2xl sm:text-4xl font-bold">Commande</h1>
+          <div className="mt-6 md:mt-8 bg-white rounded-2xl border border-line p-6 sm:p-12 text-center">
+            <div className="mx-auto size-16 rounded-full bg-canvas text-ink/40 flex items-center justify-center"><ShoppingCart size={30} /></div>
+            <p className="mt-5 font-semibold text-lg sm:text-xl">Votre panier est vide</p>
+            <Link href="/boutique" className="mt-6 sm:mt-7 flex sm:inline-flex min-h-12 items-center justify-center bg-action active:bg-action-dark md:hover:bg-action-dark text-white font-semibold px-8 py-3.5 rounded-xl transition-colors touch-manipulation">Voir la boutique</Link>
           </div>
         </div>
       </main>
@@ -214,6 +253,7 @@ export default function CheckoutPage() {
         customerId: customer?.id,
         items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, size: i.size, color: i.color })),
       });
+      setDone(true);
       clearCart();
       router.push(`/confirmation/${order.id}`);
     } catch (err: any) {
@@ -227,23 +267,23 @@ export default function CheckoutPage() {
   const noPayment = pmLoaded && paymentMethods.length === 0;
   const count = items.length;
   const submitDisabled = loading || !form.paymentMethod;
-  const submitClass = 'w-full flex items-center justify-center gap-2.5 bg-action hover:bg-action-dark text-white font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
+  const submitClass = 'w-full min-h-12 flex items-center justify-center gap-2.5 bg-action active:bg-action-dark md:hover:bg-action-dark text-white font-semibold py-3.5 rounded-xl transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed';
 
   return (
-    <main className="min-h-screen bg-canvas text-ink">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <BackButton />
+    <main className="bg-canvas text-ink md:min-h-screen">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 md:py-8">
+        <BackButton fallback="/panier" />
 
-        <h1 className="mt-5 text-3xl sm:text-4xl font-bold">Finaliser la commande</h1>
-        <p className="mt-1 text-ink/60">Remplissez vos informations ci-dessous pour compléter votre commande.</p>
+        <h1 className="mt-4 md:mt-5 text-2xl sm:text-4xl font-bold">Finaliser la commande</h1>
+        <p className="mt-1 text-sm md:text-base text-ink/70 md:text-ink/60">Remplissez vos informations ci-dessous pour compléter votre commande.</p>
 
-        <div className="mt-6 grid lg:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
-          <form id="checkout-form" onSubmit={handleSubmit} className="bg-white rounded-2xl border border-line p-6 sm:p-8 space-y-8">
-            <section className="space-y-5">
+        <div className="mt-4 md:mt-6 grid lg:grid-cols-[minmax(0,1fr)_400px] gap-4 lg:gap-6 items-start">
+          <form id="checkout-form" onSubmit={handleSubmit} className="bg-white rounded-2xl border border-line p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8">
+            <section className="space-y-4 md:space-y-5">
               <SectionTitle n={1} icon={User} title="Informations personnelles" />
-              {prefilled && <p className="rounded-xl bg-canvas px-4 py-2.5 text-sm text-ink/60">Informations préremplies depuis votre compte. Modifiez-les si besoin.</p>}
+              {prefilled && <p className="rounded-xl bg-canvas px-4 py-2.5 text-sm text-ink/70 md:text-ink/60">Informations préremplies depuis votre compte. Modifiez-les si besoin.</p>}
 
-              <div className="grid sm:grid-cols-2 gap-x-5 gap-y-4">
+              <div className="grid md:grid-cols-2 gap-x-5 gap-y-4">
                 <Field label="Nom complet" htmlFor="customerName" required>
                   <WithIcon icon={User}><input id="customerName" name="customerName" required autoComplete="name" value={form.customerName} onChange={handleChange} className={iconInputClass} /></WithIcon>
                 </Field>
@@ -266,7 +306,7 @@ export default function CheckoutPage() {
                   </WithIcon>
                 </Field>
                 <Field label="Quartier" htmlFor="quartier" required>
-                  <WithIcon icon={Home}><input id="quartier" name="quartier" required placeholder="Ex : Parcelles Assainies" value={form.quartier} onChange={handleChange} className={iconInputClass} /></WithIcon>
+                  <WithIcon icon={Home}><input id="quartier" name="quartier" required autoComplete="address-level2" placeholder="Ex : Parcelles Assainies" value={form.quartier} onChange={handleChange} className={iconInputClass} /></WithIcon>
                 </Field>
                 <Field label="Adresse précise / repère" htmlFor="address" required>
                   <WithIcon icon={MapPin}><input id="address" name="address" required autoComplete="street-address" placeholder="Ex : villa n°12" value={form.address} onChange={handleChange} className={iconInputClass} /></WithIcon>
@@ -274,11 +314,27 @@ export default function CheckoutPage() {
               </div>
 
               <div>
-                <button type="button" onClick={locateMe} disabled={geoLoading} className="inline-flex items-center gap-2 text-sm font-medium border border-line rounded-xl px-4 py-2.5 hover:border-action hover:text-action transition disabled:opacity-50">
+                <button
+                  type="button"
+                  onClick={locateMe}
+                  disabled={geoLoading}
+                  className="inline-flex w-full sm:w-auto min-h-11 items-center justify-center gap-2 text-sm font-medium border border-line rounded-xl px-4 py-2.5 touch-manipulation active:border-action active:text-action md:hover:border-action md:hover:text-action transition disabled:opacity-50"
+                >
                   <MapPin size={16} /> {geoLoading ? 'Localisation en cours...' : coords ? 'Mettre à jour ma position' : 'Utiliser ma position'}
                 </button>
-                {coords && <p className="mt-2 text-sm text-success">{geoInfo || 'Position enregistrée.'} Le livreur la verra. <button type="button" onClick={() => { setCoords(null); setGeoInfo(''); }} className="underline font-medium">Retirer</button></p>}
-                {geoError && <p className="mt-2 text-sm text-alert">{geoError}</p>}
+                {coords && (
+                  <div className="mt-2 text-sm text-success">
+                    <p>{geoInfo || 'Position enregistrée.'} Le livreur la verra.</p>
+                    <button
+                      type="button"
+                      onClick={() => { setCoords(null); setGeoInfo(''); }}
+                      className="inline-flex min-h-11 items-center underline font-medium touch-manipulation"
+                    >
+                      Retirer
+                    </button>
+                  </div>
+                )}
+                {geoError && <p className="mt-2 text-sm text-alert" role="alert">{geoError}</p>}
               </div>
 
               <Field label="Commentaire (optionnel)" htmlFor="comment">
@@ -289,7 +345,7 @@ export default function CheckoutPage() {
             </section>
 
             {/* SECTION PAIEMENT */}
-            <section className="space-y-4 border-t border-line pt-7">
+            <section className="space-y-4 border-t border-line pt-6 md:pt-7">
               <SectionTitle n={2} icon={CreditCard} title="Mode de paiement" />
 
               {noPayment ? (
@@ -301,8 +357,8 @@ export default function CheckoutPage() {
                     return (
                       <label
                         key={m.id}
-                        className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition ${
-                          isSelected ? 'border-action bg-action/5 ring-1 ring-action' : 'border-line hover:border-ink/30 bg-white'
+                        className={`flex min-h-14 items-center gap-3 p-3.5 sm:p-4 border rounded-xl cursor-pointer transition focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-action ${
+                          isSelected ? 'border-action bg-action/5 ring-1 ring-action' : 'border-line md:hover:border-ink/30 bg-white'
                         }`}
                       >
                         <input
@@ -311,14 +367,14 @@ export default function CheckoutPage() {
                           value={m.name}
                           checked={isSelected}
                           onChange={handleChange}
-                          className="hidden"
+                          className="sr-only"
                         />
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-action' : 'border-line'}`}>
-                          {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-action" />}
+                        <div className={`size-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-action' : 'border-line'}`}>
+                          {isSelected && <div className="size-2.5 rounded-full bg-action" />}
                         </div>
-                        <div className="flex items-center gap-3 flex-1">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           {getPaymentLogo(m.name)}
-                          <span className="font-bold text-sm text-ink">{m.name}</span>
+                          <span className="font-bold text-sm text-ink truncate">{m.name}</span>
                         </div>
                       </label>
                     );
@@ -329,57 +385,99 @@ export default function CheckoutPage() {
               {selectedMethod?.instructions && (
                 <div className="rounded-xl border border-action/20 bg-action-soft p-4 text-sm text-ink mt-4">
                   <p className="font-semibold mb-1">Comment payer</p>
-                  <p className="whitespace-pre-line text-ink/80">{selectedMethod.instructions}</p>
+                  <p className="whitespace-pre-line break-words text-ink/80">{selectedMethod.instructions}</p>
                 </div>
               )}
             </section>
 
-            {error && <p className="text-alert text-sm">{error}</p>}
-            <button type="submit" disabled={submitDisabled} className={`${submitClass} lg:hidden`}><Lock size={18} />{loading ? 'Envoi en cours...' : 'Confirmer la commande'}</button>
+            {error && <p className="text-alert text-sm" role="alert">{error}</p>}
+
+            {/* Mobile : total juste avant le bouton, pour confirmer en connaissance de cause */}
+            <div className="space-y-3 lg:hidden">
+              <div className="flex items-center justify-between rounded-xl bg-canvas px-4 py-3">
+                <span className="font-semibold">Total à payer</span>
+                <span className="text-lg font-bold text-action whitespace-nowrap">{formatPrice(total)}</span>
+              </div>
+              <button type="submit" disabled={submitDisabled} className={submitClass}><Lock size={18} />{loading ? 'Envoi en cours...' : 'Confirmer la commande'}</button>
+            </div>
           </form>
 
-          <aside className="bg-white rounded-2xl border border-line p-6 lg:sticky lg:top-24">
-            <div className="flex items-center justify-between gap-3">
+          {/* Mobile : récapitulatif replié EN HAUT (order-first) ; desktop : colonne de droite inchangée */}
+          <aside className="order-first lg:order-none bg-white rounded-2xl border border-line p-4 sm:p-6 lg:sticky lg:top-24">
+            {/* En-tête mobile : tout le bloc est le bouton de dépli (≥ 44 px) */}
+            <button
+              type="button"
+              onClick={() => setSummaryOpen((o) => !o)}
+              aria-expanded={summaryOpen}
+              aria-controls="order-details"
+              className="lg:hidden flex w-full min-h-11 items-center justify-between gap-3 text-left touch-manipulation"
+            >
+              <span className="min-w-0">
+                <span className="flex items-center gap-1.5 font-bold">
+                  Récapitulatif
+                  <ChevronDown className={`size-4 shrink-0 text-ink/70 transition-transform ${summaryOpen ? 'rotate-180' : ''}`} />
+                </span>
+                <span className="block text-sm text-ink/70">{count} {count > 1 ? 'articles' : 'article'}</span>
+              </span>
+              <span className="text-lg font-bold text-action whitespace-nowrap">{formatPrice(total)}</span>
+            </button>
+
+            {/* En-tête desktop */}
+            <div className="hidden lg:flex items-center justify-between gap-3">
               <h2 className="text-lg font-bold">Récapitulatif</h2>
               <Link href="/panier" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink/70 hover:text-action shrink-0"><Pencil size={14} /> Modifier</Link>
             </div>
 
-            <div className="mt-5 max-h-[26rem] overflow-y-auto -mr-2 pr-2 divide-y divide-line">
-              {items.map((item) => {
-                const img = getItemImage(item);
-                const sizeLabel = item.size && /^\d/.test(String(item.size)) ? 'Pointure' : 'Taille';
-                return (
-                  <div key={item.id} className="py-4 first:pt-0 last:pb-0 flex gap-4">
-                    <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-                      {img ? <img src={img} alt={item.name} className="block max-w-full max-h-full w-auto h-auto rounded-xl" /> : <div className="w-full h-full rounded-xl bg-canvas" />}
-                    </div>
-                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                      <div>
-                        <p className="font-semibold text-ink line-clamp-1">{item.name}</p>
-                        {(item.size || item.color) && (
-                          <p className="mt-0.5 text-sm text-ink/55">
-                            {item.color && `Couleur : ${item.color}`}
-                            {item.size && item.color && ' · '}
-                            {item.size && `${sizeLabel} : ${item.size}`}
-                          </p>
+            <div id="order-details" className={`${summaryOpen ? 'block' : 'hidden'} lg:block`}>
+              <div className="mt-3 lg:mt-5 lg:max-h-104 lg:overflow-y-auto lg:-mr-2 lg:pr-2 overscroll-contain divide-y divide-line border-t border-line lg:border-t-0">
+                {items.map((item) => {
+                  const img = getItemImage(item);
+                  const sizeLabel = item.size && /^\d/.test(String(item.size)) ? 'Pointure' : 'Taille';
+                  return (
+                    <div key={item.id} className="py-3 sm:py-4 lg:first:pt-0 last:pb-0 flex gap-3 sm:gap-4">
+                      <div className="size-16 sm:size-20 shrink-0 flex items-center justify-center">
+                        {img ? (
+                          <img
+                            src={cld(img, 160)}
+                            alt={item.name}
+                            loading="lazy"
+                            decoding="async"
+                            className="block max-w-full max-h-full w-auto h-auto rounded-xl"
+                          />
+                        ) : (
+                          <div className="size-full rounded-xl bg-canvas" />
                         )}
                       </div>
-                      <p className="text-sm text-ink/60">Quantité : <span className="font-semibold text-ink">{item.quantity}</span></p>
+                      <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                        <div>
+                          <p className="text-sm sm:text-base font-semibold text-ink line-clamp-2 sm:line-clamp-1 break-words">{item.name}</p>
+                          {(item.size || item.color) && (
+                            <p className="mt-0.5 text-xs sm:text-sm text-ink/70 md:text-ink/55">
+                              {item.color && `Couleur : ${item.color}`}
+                              {item.size && item.color && ' · '}
+                              {item.size && `${sizeLabel} : ${item.size}`}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-xs sm:text-sm text-ink/70 md:text-ink/60">Quantité : <span className="font-semibold text-ink">{item.quantity}</span></p>
+                      </div>
+                      <p className="text-sm sm:text-base font-bold text-ink shrink-0 whitespace-nowrap">{formatPrice(item.price * item.quantity)}</p>
                     </div>
-                    <p className="font-bold text-ink shrink-0">{formatPrice(item.price * item.quantity)}</p>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
 
-            <div className="mt-5 border-t border-line pt-4 space-y-2.5 text-sm">
-              <div className="flex justify-between"><span>Sous-total ({count} {count > 1 ? 'articles' : 'article'})</span><span className="font-medium">{formatPrice(subtotal)}</span></div>
-              <div className="flex justify-between"><span>Livraison</span>{deliveryFee === 0 ? <span className="font-medium text-success">Gratuite</span> : <span className="font-medium">{formatPrice(deliveryFee)}</span>}</div>
-            </div>
+              <Link href="/panier" className="lg:hidden mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-ink/70 active:text-action"><Pencil size={14} /> Modifier le panier</Link>
 
-            <div className="mt-4 border-t border-line pt-4 flex items-center justify-between">
-              <span className="text-lg font-bold">Total</span>
-              <span className="text-2xl font-bold text-action">{formatPrice(total)}</span>
+              <div className="mt-3 lg:mt-5 border-t border-line pt-4 space-y-2.5 text-sm">
+                <div className="flex justify-between gap-3"><span>Sous-total ({count} {count > 1 ? 'articles' : 'article'})</span><span className="font-medium whitespace-nowrap">{formatPrice(subtotal)}</span></div>
+                <div className="flex justify-between gap-3"><span>Livraison</span>{deliveryFee === 0 ? <span className="font-medium text-success">Gratuite</span> : <span className="font-medium whitespace-nowrap">{formatPrice(deliveryFee)}</span>}</div>
+              </div>
+
+              <div className="mt-4 border-t border-line pt-4 flex items-center justify-between gap-3">
+                <span className="text-lg font-bold">Total</span>
+                <span className="text-xl md:text-2xl font-bold text-action whitespace-nowrap">{formatPrice(total)}</span>
+              </div>
             </div>
 
             <button type="submit" form="checkout-form" disabled={submitDisabled} className={`${submitClass} mt-5 hidden lg:flex`}><Lock size={18} />{loading ? 'Envoi en cours...' : 'Confirmer la commande'}</button>

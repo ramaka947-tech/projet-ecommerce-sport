@@ -2,15 +2,23 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/api';
+import ShopName from '@/components/shop-name';
+
+const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
+const LOGO_SRC = '/logo.png';
+const DEFAULT_PHONES = ['78 486 04 22', '70 898 03 53'];
+const SITE_URL = 'https://adsportsolution.com';
+const SITE_LABEL = 'adsportsolution.com';
 
 export default function Footer() {
   const [s, setS] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    getSettings().then(setS).catch(() => {});
+    getSettings().then(setS).catch(() => { });
   }, []);
 
-  const shopName = s.shop_name || 'SportPro';
+  const shopName = s.shop_name || DEFAULT_SHOP_NAME;
+  const phones = s.contact_phone ? [s.contact_phone] : DEFAULT_PHONES;
 
   const socials = [
     {
@@ -55,23 +63,34 @@ export default function Footer() {
     },
   ].filter((x) => x.href);
 
-  const link = 'text-white/70 hover:text-white transition';
+  // Sur mobile : cible tactile de 44 px ; sur desktop : lien compact comme avant
+  const link =
+    'inline-flex min-h-11 items-center break-words text-white/70 transition active:text-white md:min-h-0 md:hover:text-white';
 
   return (
-    <footer className="bg-ink text-white mt-auto">
-      <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+    <footer className="mt-auto bg-ink text-white">
+      <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-4 md:gap-8 md:py-12">
         <div className="col-span-2 md:col-span-1">
-          <Link href="/" className="flex items-center gap-2 mb-3" aria-label={shopName}>
-            <img src="/logo.png" alt="" className="h-9 w-auto" />
-            <span className="text-2xl font-extrabold tracking-tight">{shopName}</span>
+          <Link href="/" className="mb-3 flex min-h-11 items-center gap-3" aria-label={shopName}>
+            <img
+              src={LOGO_SRC}
+              alt=""
+              width={44}
+              height={44}
+              className="size-11 shrink-0 rounded-full object-cover"
+            />
+            <ShopName
+              name={shopName}
+              className="min-w-0 text-xl font-extrabold tracking-tight min-[380px]:text-2xl"
+            />
           </Link>
-          {s.tagline && <p className="text-white/70 text-sm">{s.tagline}</p>}
+          {s.tagline && <p className="text-sm text-white/70">{s.tagline}</p>}
           {s.contact_address && (
-            <p className="text-white/70 text-sm mt-3">{s.contact_address}</p>
+            <p className="mt-3 break-words text-sm text-white/70">{s.contact_address}</p>
           )}
 
           {socials.length > 0 && (
-            <div className="flex items-center gap-3 mt-5">
+            <div className="mt-5 flex flex-wrap items-center gap-3">
               {socials.map((x) => (
                 <a
                   key={x.label}
@@ -79,7 +98,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={x.label}
-                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-action flex items-center justify-center text-white transition"
+                  className="flex size-11 touch-manipulation items-center justify-center rounded-full bg-white/10 text-white transition active:bg-action md:size-9 md:hover:bg-action"
                 >
                   {x.icon}
                 </a>
@@ -89,8 +108,8 @@ export default function Footer() {
         </div>
 
         <div>
-          <h4 className="font-bold mb-4">Boutique</h4>
-          <ul className="space-y-2 text-sm">
+          <h4 className="mb-2 font-bold md:mb-4">Boutique</h4>
+          <ul className="space-y-0 text-sm md:space-y-2">
             <li><Link href="/boutique" className={link}>Tous les produits</Link></li>
             <li><Link href="/boutique?onSale=true" className={link}>Promotions</Link></li>
             <li><Link href="/suivi" className={link}>Suivre ma commande</Link></li>
@@ -98,32 +117,37 @@ export default function Footer() {
         </div>
 
         <div>
-          <h4 className="font-bold mb-4">Informations</h4>
-          <ul className="space-y-2 text-sm">
+          <h4 className="mb-2 font-bold md:mb-4">Informations</h4>
+          <ul className="space-y-0 text-sm md:space-y-2">
             <li><Link href="/contact" className={link}>Contact</Link></li>
             <li><Link href="/a-propos" className={link}>À propos</Link></li>
             <li><Link href="/cgv" className={link}>CGV</Link></li>
           </ul>
         </div>
 
-        <div>
-          <h4 className="font-bold mb-4">Contact</h4>
-          <ul className="space-y-2 text-sm">
+        <div className="col-span-2 md:col-span-1">
+          <h4 className="mb-2 font-bold md:mb-4">Contact</h4>
+          <ul className="space-y-0 text-sm md:space-y-2">
             {s.contact_email && (
               <li>
                 <a href={`mailto:${s.contact_email}`} className={link}>{s.contact_email}</a>
               </li>
             )}
-            {s.contact_phone && (
-              <li>
-                <a href={`tel:${s.contact_phone.replace(/[^\d+]/g, '')}`} className={link}>{s.contact_phone}</a>
+            {phones.map((phone) => (
+              <li key={phone}>
+                <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className={link}>{phone}</a>
               </li>
-            )}
+            ))}
+            <li>
+              <a href={SITE_URL} target="_blank" rel="noopener noreferrer" className={link}>
+                {SITE_LABEL}
+              </a>
+            </li>
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-white/10 py-4 text-center text-xs text-white/60">
+      <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/60">
         © {new Date().getFullYear()} {shopName}. Tous droits réservés.
       </div>
     </footer>
