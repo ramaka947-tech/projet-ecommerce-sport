@@ -21,7 +21,8 @@ export const metadata: Metadata = {
     "Vente de tout genre d'équipements de sport au Sénégal : maillots, chaussures, ballons, musculation et plus.",
   applicationName: "AD Sport Solutions",
   icons: {
-    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    // Next.js va automatiquement chercher app/icon.png pour le favicon.
+    // On garde juste l'icône Apple pour l'écran d'accueil iOS :
     apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
