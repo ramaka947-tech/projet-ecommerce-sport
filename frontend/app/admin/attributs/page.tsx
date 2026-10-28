@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Shirt, Tag, Palette, Check, Loader2 } from 'lucide-react';
 import AdminGuard from '@/lib/admin-guard';
 import { COLOR_PALETTE } from '@/lib/color-palette';
+import ConfirmModal from '@/components/ui/confirm-modal';
 import {
   getSizes, createSize, deleteSize,
   getColors, createColor, deleteColor,
@@ -64,6 +65,14 @@ export default function AttributesPage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [addingColors, setAddingColors] = useState(false);
 
+  // État pour la modale de suppression
+  const [deleteConfig, setDeleteConfig] = useState<{
+    id: string;
+    type: 'size' | 'color' | 'brand';
+    name: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const load = async () => {
     const [s, c, b] = await Promise.all([getSizes(), getColors(), getBrands()]);
     setSizes(s); setColors(c); setBrands(b); setLoading(false);
@@ -93,6 +102,22 @@ export default function AttributesPage() {
     setSelectedColors([]);
     await load();
     setAddingColors(false);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfig) return;
+    setIsDeleting(true);
+    try {
+      if (deleteConfig.type === 'size') await deleteSize(deleteConfig.id);
+      if (deleteConfig.type === 'color') await deleteColor(deleteConfig.id);
+      if (deleteConfig.type === 'brand') await deleteBrand(deleteConfig.id);
+      await load();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfig(null);
+    }
   };
 
   const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -138,14 +163,26 @@ export default function AttributesPage() {
               <div className="min-w-0 flex-1">
                 <p className="mb-3 text-sm font-semibold">Tailles lettre</p>
                 <ul className="flex flex-wrap gap-2">
-                  {letters.map(s => <Chip key={s.id} label={s.name} onDelete={async () => { await deleteSize(s.id); load(); }} />)}
+                  {letters.map(s => (
+                    <Chip 
+                      key={s.id} 
+                      label={s.name} 
+                      onDelete={() => setDeleteConfig({ id: s.id, type: 'size', name: s.name })} 
+                    />
+                  ))}
                   {letters.length === 0 && <p className="text-sm text-ink/40">Aucune.</p>}
                 </ul>
               </div>
               <div className="min-w-0 flex-1">
                 <p className="mb-3 text-sm font-semibold">Tailles numériques</p>
                 <ul className="flex flex-wrap gap-2">
-                  {numbers.map(s => <Chip key={s.id} label={s.name} onDelete={async () => { await deleteSize(s.id); load(); }} />)}
+                  {numbers.map(s => (
+                    <Chip 
+                      key={s.id} 
+                      label={s.name} 
+                      onDelete={() => setDeleteConfig({ id: s.id, type: 'size', name: s.name })} 
+                    />
+                  ))}
                   {numbers.length === 0 && <p className="text-sm text-ink/40">Aucune.</p>}
                 </ul>
               </div>
@@ -168,7 +205,13 @@ export default function AttributesPage() {
             <div className="min-w-0">
               <p className="mb-3 text-sm font-semibold">Marques disponibles</p>
               <ul className="flex flex-wrap gap-2">
-                {brands.map(b => <Chip key={b.id} label={b.name} onDelete={async () => { await deleteBrand(b.id); load(); }} />)}
+                {brands.map(b => (
+                  <Chip 
+                    key={b.id} 
+                    label={b.name} 
+                    onDelete={() => setDeleteConfig({ id: b.id, type: 'brand', name: b.name })} 
+                  />
+                ))}
                 {brands.length === 0 && <p className="text-sm text-ink/40">Aucune marque.</p>}
               </ul>
             </div>
@@ -229,7 +272,11 @@ export default function AttributesPage() {
                   <li key={c.id} className="inline-flex items-center gap-1.5 rounded-md border border-line bg-white py-1 pl-2 pr-1 text-sm font-medium">
                     <span className="size-4 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.hex || '#ccc' }} />
                     <span className="truncate">{c.name}</span>
-                    <button onClick={async () => { await deleteColor(c.id); load(); }} aria-label={`Supprimer ${c.name}`} className="flex size-7 items-center justify-center rounded text-ink/40 transition hover:bg-action-soft hover:text-action">
+                    <button 
+                      onClick={() => setDeleteConfig({ id: c.id, type: 'color', name: c.name })} 
+                      aria-label={`Supprimer ${c.name}`} 
+                      className="flex size-7 items-center justify-center rounded text-ink/40 transition hover:bg-action-soft hover:text-action"
+                    >
                       <X size={14} />
                     </button>
                   </li>
@@ -239,6 +286,17 @@ export default function AttributesPage() {
           </div>
         </section>
       </div>
+
+      {/* MODALE DE CONFIRMATION */}
+      <ConfirmModal
+        isOpen={!!deleteConfig}
+        title="Supprimer cet élément ?"
+        message={`Voulez-vous vraiment supprimer "${deleteConfig?.name}" ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        isLoading={isDeleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfig(null)}
+      />
     </AdminGuard>
   );
 }

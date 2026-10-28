@@ -11,6 +11,7 @@ import TopBar from './top-bar';
 import SavedDataSync from '@/components/saved-data-sync';
 import SiteChrome from './site-chrome';
 import { PwaRegister } from '@/components/pwa';
+import GlobalConfirm from '@/components/global-confirm'; // 👈 IMPORT AJOUTÉ
 
 export const metadata: Metadata = {
   title: {
@@ -21,8 +22,6 @@ export const metadata: Metadata = {
     "Vente de tout genre d'équipements de sport au Sénégal : maillots, chaussures, ballons, musculation et plus.",
   applicationName: "AD Sport Solutions",
   icons: {
-    // Next.js va automatiquement chercher app/icon.png pour le favicon.
-    // On garde juste l'icône Apple pour l'écran d'accueil iOS :
     apple: "/icons/apple-touch-icon.png",
   },
   appleWebApp: {
@@ -43,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        <GlobalConfirm /> {/* 👈 COMPOSANT AJOUTÉ ICI */}
         <PwaRegister />
         <CartProvider>
           <FavoritesProvider>
