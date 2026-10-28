@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service.js';
 
+const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
+
 const escapeHtml = (s: string) =>
   s
     .replace(/&/g, '&amp;')
@@ -39,9 +41,9 @@ export class MailService {
   private async shopName(): Promise<string> {
     try {
       const s = await this.prisma.setting.findUnique({ where: { key: 'shop_name' } });
-      return s?.value || 'SportPro';
+      return s?.value?.trim() || DEFAULT_SHOP_NAME;
     } catch {
-      return 'SportPro';
+      return DEFAULT_SHOP_NAME;
     }
   }
 
@@ -55,7 +57,7 @@ export class MailService {
       }
 
       const shop = await this.shopName();
-      const siteUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+      const siteUrl = (process.env.FRONTEND_URL || 'https://projet-ecommerce-sport-63a1.vercel.app').replace(/\/$/, '');
       const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = name.trim().split(/\s+/)[0] || name;
 
@@ -103,7 +105,7 @@ export class MailService {
   }
 
   // Ne lève jamais d'erreur : un email raté ne doit pas empêcher la création du compte
-    async sendAdminWelcome(to: string, name: string, password: string): Promise<boolean> {
+  async sendAdminWelcome(to: string, name: string, password: string): Promise<boolean> {
     try {
       const transporter = this.getTransporter();
       if (!transporter) {
@@ -126,11 +128,13 @@ export class MailService {
         muted: '#6B6B6B',
       };
 
-      // "SportPro" -> "Sport" en blanc + "Pro" en rouge
-      const m = shop.match(/^(.+?)(Pro)$/i);
-      const brand = m
-        ? `<span style="color:#ffffff">${escapeHtml(m[1])}</span><span style="color:${C.action}">${escapeHtml(m[2])}</span>`
-        : `<span style="color:#ffffff">${escapeHtml(shop)}</span>`;
+      // "AD Sport Solutions" -> "AD Sport" en blanc + "Solutions" en rouge
+      // (dernier mot en rouge ; si le nom n'a qu'un mot, tout reste en blanc)
+      const words = shop.trim().split(/\s+/);
+      const brand =
+        words.length > 1
+          ? `<span style="color:#ffffff">${escapeHtml(words.slice(0, -1).join(' '))} </span><span style="color:${C.action}">${escapeHtml(words[words.length - 1])}</span>`
+          : `<span style="color:#ffffff">${escapeHtml(shop)}</span>`;
 
       const text = [
         `Bonjour ${first},`,
@@ -206,4 +210,3 @@ export class MailService {
     }
   }
 }
-

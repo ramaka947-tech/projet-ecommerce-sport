@@ -6,9 +6,13 @@ import { Heart, ShoppingCart, User, Search } from 'lucide-react';
 import { getSettings } from '@/lib/api';
 import { useCart } from '@/lib/cart-context';
 import { useFavorites } from '@/lib/favorites-context';
+import ShopName from '@/components/shop-name';
+
+const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
+const LOGO_SRC = '/logo.png';
 
 function HeaderContent() {
-  const [shopName, setShopName] = useState('SportPro');
+  const [shopName, setShopName] = useState(DEFAULT_SHOP_NAME);
   const [search, setSearch] = useState('');
   const { count: cartCount } = useCart();
   const { count: favCount } = useFavorites();
@@ -50,9 +54,15 @@ function HeaderContent() {
     <header className="hidden md:block sticky top-0 z-40 bg-ink text-white">
       {/* Ligne 1 : logo + recherche + icônes */}
       <div className="max-w-7xl mx-auto px-6 pt-4 flex items-center gap-6">
-        <Link href="/" className="flex items-center gap-2 shrink-0" aria-label={shopName}>
-          <img src="/logo.png" alt="" className="h-9 w-auto" />
-          <span className="text-2xl font-extrabold tracking-tight">{shopName}</span>
+        <Link href="/" className="flex items-center gap-3 shrink-0" aria-label={shopName}>
+          <img
+            src={LOGO_SRC}
+            alt=""
+            width={44}
+            height={44}
+            className="size-11 shrink-0 rounded-full object-cover"
+          />
+          <ShopName name={shopName} className="text-2xl font-extrabold tracking-tight" />
         </Link>
 
         <form onSubmit={handleSearch} className="flex-1 max-w-xl mx-auto" role="search">

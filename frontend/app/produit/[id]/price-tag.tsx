@@ -10,17 +10,19 @@ export default function PriceTag({
   promoPrice?: number | null;
 }) {
   const { formatPrice } = useCurrency();
-  const hasPromo = !!promoPrice;
+  // Une promo n'a de sens que si elle est réellement moins chère
+  const hasPromo = !!promoPrice && price > 0 && Number(promoPrice) < price;
   const discount = hasPromo ? Math.round((1 - Number(promoPrice) / price) * 100) : 0;
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
       {hasPromo ? (
         <>
           <span className="text-2xl sm:text-3xl font-extrabold text-alert">
             {formatPrice(Number(promoPrice))}
           </span>
-          <span className="text-base sm:text-lg text-ink/40 line-through">
+          <span className="text-base sm:text-lg text-ink/70 md:text-ink/40 line-through">
+            <span className="sr-only">Ancien prix : </span>
             {formatPrice(price)}
           </span>
           <span className="rounded-full bg-alert text-white text-xs font-bold px-2.5 py-1">

@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react';
 import { getSettings, updateSettings } from '@/lib/api';
 import { parseCgv, type CgvSection } from '@/lib/cgv';
-import { 
-  Loader2, Plus, Trash2, ArrowUp, ArrowDown, 
-  CheckCircle2, ShieldCheck 
+import {
+  Loader2, Plus, Trash2, ArrowUp, ArrowDown,
+  CheckCircle2, ShieldCheck
 } from 'lucide-react';
 import AdminGuard from '@/lib/admin-guard';
 
@@ -27,7 +27,7 @@ export default function AdminCgvPage() {
     );
 
   const add = () => setSections((p) => [...p, { title: '', content: '' }]);
-  
+
   const remove = (i: number) =>
     setSections((p) => p.filter((_, idx) => idx !== i));
 
@@ -58,44 +58,54 @@ export default function AdminCgvPage() {
     }
   };
 
-  if (loading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-action" size={32} /></div>;
+  if (loading) {
+    return (
+      <AdminGuard>
+        <div className="flex justify-center p-8"><Loader2 className="animate-spin text-action" size={32} /></div>
+      </AdminGuard>
+    );
+  }
 
   return (
     <AdminGuard>
-      <div className="max-w-4xl mx-auto">
-        
-        {/* En-tête */}
-        <div className="mb-8 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-action text-white flex items-center justify-center">
-            <ShieldCheck size={24} />
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-6 flex items-center gap-3 md:mb-8">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-action text-white md:size-12 md:rounded-2xl">
+            <ShieldCheck size={20} className="md:hidden" />
+            <ShieldCheck size={24} className="hidden md:block" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-ink">Conditions Générales de Vente</h1>
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-ink md:text-2xl">Conditions Générales de Vente</h1>
             <p className="text-sm text-ink/60">Gérez les sections qui composent vos CGV.</p>
           </div>
         </div>
 
-        <div className="space-y-6">
-          
+        <div className="space-y-4 md:space-y-6">
           {sections.map((s, i) => (
-            <section key={i} className="bg-white border border-line rounded-2xl p-6 shadow-sm relative mt-4">
-              {/* Numéro de section */}
-              <div className="absolute -top-4 left-6 w-8 h-8 rounded-full bg-ink text-white flex items-center justify-center font-bold text-sm border-4 border-canvas z-10">
+            <section key={i} className="relative mt-4 rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+              <div className="absolute -top-4 left-4 flex size-8 items-center justify-center rounded-full border-4 border-canvas bg-ink text-sm font-bold text-white md:left-6">
                 {i + 1}
               </div>
 
-              <div className="space-y-4 mt-2">
-                <div className="flex items-center gap-3">
+              <div className="mt-2 space-y-3 md:space-y-4">
+                {/* Mobile : titre + boutons en colonne */}
+                <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
                   <input
                     value={s.title}
                     onChange={(e) => update(i, 'title', e.target.value)}
                     placeholder="Titre (ex : Livraison)"
-                    className="flex-1 border border-line rounded-lg px-3 py-2.5 text-sm font-bold text-ink focus:outline-none focus:border-action bg-canvas/30"
+                    className="min-h-11 w-full flex-1 rounded-lg border border-line bg-canvas/30 px-3 text-base font-bold text-ink focus:border-action focus:outline-none md:min-h-0 md:py-2.5 md:text-sm"
                   />
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-2 text-ink/40 hover:text-ink bg-canvas rounded-lg disabled:opacity-30 transition"><ArrowUp size={16} /></button>
-                    <button type="button" onClick={() => move(i, 1)} disabled={i === sections.length - 1} className="p-2 text-ink/40 hover:text-ink bg-canvas rounded-lg disabled:opacity-30 transition"><ArrowDown size={16} /></button>
-                    <button type="button" onClick={() => remove(i)} className="p-2 text-action hover:bg-action-soft rounded-lg transition ml-2" title="Supprimer cette section"><Trash2 size={18} /></button>
+                  <div className="flex shrink-0 items-center justify-end gap-1">
+                    <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Monter" className="flex size-10 items-center justify-center rounded-lg bg-canvas text-ink/50 transition hover:text-ink disabled:opacity-30">
+                      <ArrowUp size={16} />
+                    </button>
+                    <button type="button" onClick={() => move(i, 1)} disabled={i === sections.length - 1} aria-label="Descendre" className="flex size-10 items-center justify-center rounded-lg bg-canvas text-ink/50 transition hover:text-ink disabled:opacity-30">
+                      <ArrowDown size={16} />
+                    </button>
+                    <button type="button" onClick={() => remove(i)} aria-label="Supprimer" className="flex size-10 items-center justify-center rounded-lg text-action transition hover:bg-action-soft">
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
 
@@ -104,40 +114,37 @@ export default function AdminCgvPage() {
                   onChange={(e) => update(i, 'content', e.target.value)}
                   placeholder="Texte de la section..."
                   rows={4}
-                  className="w-full border border-line rounded-lg px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-action bg-white resize-none"
+                  className="min-h-28 w-full resize-none rounded-lg border border-line bg-white px-3 py-2.5 text-base text-ink focus:border-action focus:outline-none md:min-h-0 md:text-sm"
                 />
               </div>
             </section>
           ))}
 
-          <button 
-            type="button" 
-            onClick={add} 
-            className="w-full py-4 border-2 border-dashed border-line hover:border-action rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold text-action bg-white transition"
+          <button
+            type="button"
+            onClick={add}
+            className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-line bg-white text-sm font-semibold text-action transition hover:border-action"
           >
             <Plus size={18} /> Ajouter une section
           </button>
 
-          {/* Message de succès/erreur */}
           {msg && (
-            <div className={`p-4 rounded-xl border flex items-center gap-2 font-medium text-sm ${msg.ok ? 'bg-success-soft border-success/20 text-success' : 'bg-action-soft border-action/20 text-action'}`}>
-              {msg.ok && <CheckCircle2 size={18} />}
+            <div className={`flex items-center gap-2 rounded-xl border p-4 text-sm font-medium ${msg.ok ? 'border-success/20 bg-success-soft text-success' : 'border-action/20 bg-action-soft text-action'}`}>
+              {msg.ok && <CheckCircle2 size={18} className="shrink-0" />}
               {msg.text}
             </div>
           )}
 
-          {/* Bouton Enregistrer */}
-          <div className="flex justify-end pt-4 pb-8">
+          <div className="flex pb-8 pt-2 md:justify-end">
             <button
               type="button"
               onClick={save}
               disabled={saving}
-              className="bg-action text-white font-bold px-8 py-3 rounded-xl hover:bg-action-dark transition shadow-sm disabled:opacity-50"
+              className="min-h-12 w-full rounded-xl bg-action px-8 py-3 font-bold text-white shadow-sm transition hover:bg-action-dark disabled:opacity-50 md:min-h-0 md:w-auto"
             >
               {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
             </button>
           </div>
-
         </div>
       </div>
     </AdminGuard>

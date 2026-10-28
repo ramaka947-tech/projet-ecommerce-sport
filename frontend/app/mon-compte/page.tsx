@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -17,16 +17,26 @@ import {
   Phone,
   User,
   MessageSquare,
-  ArrowLeft, // Ajout de l'icône
 } from 'lucide-react';
 import { useCustomerAuth } from '@/lib/customer-auth-context';
 import { getCustomerToken } from '@/lib/customer-auth';
 import { getMyOrders, updateMyProfile } from '@/lib/api';
 import { PhoneField } from '@/components/country-fields';
+import BackButton from '@/components/back-button';
 import { COUNTRIES, DEFAULT_COUNTRY, formatFullPhone, validatePhone } from '@/lib/countries';
 import { getMyLocation } from '@/lib/geo';
 import { useCurrency } from '@/lib/currency';
 import { getRecentOrders, RecentOrder, trackingUrl } from '@/lib/recent-orders';
+
+type OrderRow = {
+  id: string | number;
+  orderNumber: string;
+  customerPhone: string;
+  createdAt: string;
+  total: number;
+  status: string;
+  items?: { quantity: number }[];
+};
 
 const STATUS_LABELS: Record<string, string> = {
   NEW: 'Nouvelle',
@@ -46,35 +56,14 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: 'bg-action-soft text-action',
 };
 
+// 16 px (text-base) : évite le zoom automatique d'iOS. Hauteur 48 px sur mobile.
 const inputClass =
-  'w-full rounded-lg border border-line bg-white py-3 pl-10 pr-3 text-ink placeholder:text-gray-400 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20';
+  'min-h-12 w-full rounded-lg border border-line bg-white py-3 pl-10 pr-3 text-base text-ink placeholder:text-gray-500 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20 md:min-h-0';
 
 const cardClass = 'rounded-xl border border-line bg-white shadow-sm';
 
 const fieldClass =
-  'w-full rounded-lg border border-line bg-white px-3 py-2.5 text-ink placeholder:text-gray-400 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20';
-
-// Bouton de retour
-function BackLink() {
-  const router = useRouter();
-  const goBack = () => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/');
-    }
-  };
-  return (
-    <button
-      type="button"
-      onClick={goBack}
-      className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-sm font-semibold text-ink shadow-sm transition hover:border-action hover:text-action mb-6"
-    >
-      <ArrowLeft className="h-4 w-4" />
-      Retour
-    </button>
-  );
-}
+  'min-h-12 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-base text-ink placeholder:text-gray-500 focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20 md:min-h-0';
 
 function splitPhone(full: string, fallback: string) {
   const compact = String(full || '').replace(/\s/g, '');
@@ -93,7 +82,7 @@ export default function AccountPage() {
   const { formatPrice } = useCurrency();
 
   const [hasToken, setHasToken] = useState<boolean | null>(null);
-  const [orders, setOrders] = useState<any[] | null>(null);
+  const [orders, setOrders] = useState<OrderRow[] | null>(null);
   const [recents, setRecents] = useState<RecentOrder[]>([]);
   const [numberInput, setNumberInput] = useState('');
   const [phoneInput, setPhoneInput] = useState('');
@@ -114,18 +103,36 @@ export default function AccountPage() {
   const [saveError, setSaveError] = useState('');
   const [savedMsg, setSavedMsg] = useState(false);
 
+  const profileRef = useRef<HTMLElement>(null);
+
+  // Le stockage local peut lever une exception (mode privé iOS) : on protège.
   useEffect(() => {
-    setHasToken(!!getCustomerToken());
-    setRecents(getRecentOrders());
+    try {
+      setHasToken(!!getCustomerToken());
+    } catch {
+      setHasToken(false);
+    }
+    try {
+      setRecents(getRecentOrders());
+    } catch {
+      setRecents([]);
+    }
   }, []);
 
   useEffect(() => {
     if (customer) {
       getMyOrders()
-        .then(setOrders)
+        .then((o) => setOrders(o as OrderRow[]))
         .catch(() => setOrders([]));
     }
   }, [customer]);
+
+  // Le message « Informations mises à jour » disparaît tout seul (avec nettoyage du minuteur)
+  useEffect(() => {
+    if (!savedMsg) return;
+    const t = setTimeout(() => setSavedMsg(false), 4000);
+    return () => clearTimeout(t);
+  }, [savedMsg]);
 
   const startEdit = () => {
     const countryCode =
@@ -180,8 +187,12 @@ export default function AccountPage() {
           ? `Position trouvée : ${[loc.quartier, loc.region].filter(Boolean).join(', ')}. Vérifiez et ajoutez un repère précis.${accuracyNote}`
           : `Position trouvée. Ville non détectée : complétez le champ manquant.${accuracyNote}`,
       );
-    } catch (err: any) {
-      setGeoError(err.message);
+    } catch (err) {
+      setGeoError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Impossible de déterminer votre position. Remplissez les champs à la main.",
+      );
     } finally {
       setGeoLoading(false);
     }
@@ -189,6 +200,7 @@ export default function AccountPage() {
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
+    if (saving) return;
     setSaveError('');
 
     const name = form.name.trim();
@@ -213,9 +225,16 @@ export default function AccountPage() {
       updateCustomer(updated);
       setEditing(false);
       setSavedMsg(true);
-      setTimeout(() => setSavedMsg(false), 4000);
-    } catch (err: any) {
-      setSaveError(err.message || "Impossible d'enregistrer les modifications");
+      // Sur téléphone, le formulaire était long : on remonte voir la confirmation
+      requestAnimationFrame(() =>
+        profileRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      );
+    } catch (err) {
+      setSaveError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Impossible d'enregistrer les modifications",
+      );
     } finally {
       setSaving(false);
     }
@@ -228,40 +247,45 @@ export default function AccountPage() {
 
   if (hasToken === null || (hasToken && !customer)) {
     return (
-      <main className="min-h-screen bg-canvas p-8 text-gray-500">Chargement...</main>
+      <main
+        role="status"
+        className="bg-canvas px-4 py-8 text-gray-500 sm:px-8 md:min-h-screen"
+      >
+        Chargement...
+      </main>
     );
   }
 
   if (!customer) {
     return (
-      <main className="min-h-screen bg-canvas px-4 py-8 sm:px-8 sm:py-10">
+      <main className="bg-canvas px-4 py-5 sm:px-8 sm:py-10 md:min-h-screen">
         <div className="mx-auto max-w-xl">
-          <BackLink />
-          
+          <BackButton fallback="/" className="mb-4 md:mb-6" />
+
           {loggedOut && (
             <div
               role="status"
               className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-success/30 bg-success-soft p-4 text-success"
             >
-              <CheckCircle2 className="h-6 w-6 shrink-0" />
+              <CheckCircle2 className="size-6 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">Vous êtes déconnecté</p>
-                <p className="text-sm">À bientôt sur SportPro !</p>
+                <p className="text-sm">À bientôt sur AD Sport Solutions !</p>
               </div>
               <Link
                 href="/"
-                className="rounded-lg border border-success px-3 py-1.5 text-sm font-semibold transition hover:bg-white"
+                className="inline-flex min-h-11 w-full touch-manipulation items-center justify-center rounded-lg border border-success px-3 text-sm font-semibold transition active:bg-white sm:w-auto md:min-h-0 md:py-1.5 md:hover:bg-white"
               >
-                Retour à l'accueil
+                Retour à l&apos;accueil
               </Link>
             </div>
           )}
 
-          <h1 className="mb-6 text-3xl font-bold text-ink">Mon compte</h1>
+          <h1 className="mb-5 text-2xl font-bold text-ink sm:text-3xl md:mb-6">Mon compte</h1>
 
-          <section className={`${cardClass} mb-6 p-5 sm:p-6`}>
+          <section className={`${cardClass} mb-5 p-5 sm:p-6 md:mb-6`}>
             <h2 className="mb-1 flex items-center gap-2 text-xl font-bold text-ink">
-              <PackageSearch className="h-5 w-5 text-action" />
+              <PackageSearch className="size-5 text-action" aria-hidden="true" />
               Suivre ma commande
             </h2>
             <p className="mb-4 text-sm text-gray-500">
@@ -269,9 +293,18 @@ export default function AccountPage() {
             </p>
             <form onSubmit={onTrack} className="space-y-3">
               <div className="relative">
-                <Package className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Package
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+                  aria-hidden="true"
+                />
                 <input
                   required
+                  name="orderNumber"
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-label="Numéro de commande"
                   placeholder="Numéro de commande (CMD-...)"
                   value={numberInput}
                   onChange={(e) => setNumberInput(e.target.value)}
@@ -279,11 +312,17 @@ export default function AccountPage() {
                 />
               </div>
               <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Phone
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+                  aria-hidden="true"
+                />
                 <input
                   required
+                  name="phone"
                   type="tel"
                   inputMode="tel"
+                  autoComplete="tel"
+                  aria-label="Téléphone"
                   placeholder="Téléphone"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
@@ -292,7 +331,7 @@ export default function AccountPage() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-lg bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-dark"
+                className="min-h-12 w-full touch-manipulation rounded-lg bg-action px-6 py-3 font-semibold text-white transition active:bg-action-dark md:min-h-0 md:hover:bg-action-dark"
               >
                 Suivre ma commande
               </button>
@@ -301,7 +340,7 @@ export default function AccountPage() {
             {recents.length > 0 && (
               <div className="mt-6 border-t border-line pt-4">
                 <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink">
-                  <Clock className="h-4 w-4 text-action" />
+                  <Clock className="size-4 text-action" aria-hidden="true" />
                   Sur cet appareil
                 </p>
                 <div className="space-y-2">
@@ -309,12 +348,17 @@ export default function AccountPage() {
                     <Link
                       key={r.orderNumber}
                       href={trackingUrl(r.orderNumber, r.phone)}
-                      className="group flex items-center justify-between rounded-lg border border-line px-4 py-2.5 text-sm transition hover:border-action"
+                      className="group flex min-h-12 touch-manipulation items-center justify-between gap-3 rounded-lg border border-line px-4 py-2.5 text-sm transition active:border-action md:min-h-0 md:hover:border-action"
                     >
-                      <span className="font-semibold text-ink">{r.orderNumber}</span>
-                      <span className="flex items-center gap-2 text-gray-500">
+                      <span className="min-w-0 break-all font-semibold text-ink">
+                        {r.orderNumber}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2 text-gray-500">
                         {new Date(r.date).toLocaleDateString('fr-FR')}
-                        <ChevronRight className="h-4 w-4 text-gray-400 transition group-hover:text-action" />
+                        <ChevronRight
+                          className="size-4 text-gray-400 transition md:group-hover:text-action"
+                          aria-hidden="true"
+                        />
                       </span>
                     </Link>
                   ))}
@@ -325,16 +369,16 @@ export default function AccountPage() {
 
           <section className={`${cardClass} p-5 sm:p-6`}>
             <h2 className="mb-1 flex items-center gap-2 text-xl font-bold text-ink">
-              <User className="h-5 w-5 text-action" />
-              Un compte, c'est plus pratique
+              <User className="size-5 text-action" aria-hidden="true" />
+              Un compte, c&apos;est plus pratique
             </h2>
             <p className="mb-4 text-sm text-gray-500">
-              Retrouvez vos commandes, votre panier et vos favoris sur n'importe quel téléphone,
-              même si vous changez d'appareil.
+              Retrouvez vos commandes, votre panier et vos favoris sur n&apos;importe quel
+              téléphone, même si vous changez d&apos;appareil.
             </p>
             <Link
               href="/compte/connexion"
-              className="inline-block rounded-lg bg-action px-6 py-3 font-semibold text-white transition hover:bg-action-dark"
+              className="flex min-h-12 w-full touch-manipulation items-center justify-center rounded-lg bg-action px-6 py-3 text-center font-semibold text-white transition active:bg-action-dark md:inline-block md:min-h-0 md:w-auto md:hover:bg-action-dark"
             >
               Se connecter ou créer un compte
             </Link>
@@ -345,29 +389,29 @@ export default function AccountPage() {
   }
 
   const firstName = String(customer.name || '').split(' ')[0];
-  const location = [customer.address, customer.region]
-    .filter(Boolean)
-    .join(', ');
+  const location = [customer.address, customer.region].filter(Boolean).join(', ');
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-8 sm:px-8 sm:py-10">
+    <main className="bg-canvas px-4 py-5 sm:px-8 sm:py-10 md:min-h-screen">
       <div className="mx-auto max-w-5xl">
-        <BackLink />
+        <BackButton fallback="/" className="mb-4 md:mb-6" />
 
-        <h1 className="text-3xl font-bold text-ink">Bonjour {firstName}</h1>
+        <h1 className="break-words text-2xl font-bold text-ink sm:text-3xl">
+          Bonjour {firstName}
+        </h1>
         <p className="mt-1 text-sm text-gray-500">
           Retrouvez vos informations et suivez vos commandes.
         </p>
 
         <div
-          className={`mt-6 grid items-start gap-6 ${
+          className={`mt-5 grid items-start gap-5 md:mt-6 md:gap-6 ${
             editing ? '' : 'md:grid-cols-[1fr_1.8fr]'
           }`}
         >
-          <section className={`${cardClass} p-5 sm:p-6`}>
+          <section ref={profileRef} className={`${cardClass} min-w-0 scroll-mt-20 p-5 sm:p-6 md:scroll-mt-0`}>
             <div className="flex items-center gap-4">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-ink text-white">
-                <User className="h-7 w-7" />
+              <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+                <User className="size-7" aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <p className="truncate text-lg font-bold text-ink">{customer.name}</p>
@@ -382,7 +426,7 @@ export default function AccountPage() {
                 role="status"
                 className="mt-5 flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2 text-sm font-semibold text-success"
               >
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
                 Informations mises à jour
               </div>
             )}
@@ -390,7 +434,7 @@ export default function AccountPage() {
             {editing ? (
               <form onSubmit={saveProfile} className="mt-5 border-t border-line pt-5">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
+                  <div className="min-w-0">
                     <label htmlFor="edit-name" className="mb-1.5 block text-sm font-semibold text-ink">
                       Nom complet
                     </label>
@@ -405,7 +449,7 @@ export default function AccountPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <label htmlFor="edit-phone" className="mb-1.5 block text-sm font-semibold text-ink">
                       Téléphone
                     </label>
@@ -420,7 +464,7 @@ export default function AccountPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <label htmlFor="edit-region" className="mb-1.5 block text-sm font-semibold text-ink">
                       Ville
                     </label>
@@ -435,7 +479,7 @@ export default function AccountPage() {
                     />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <label htmlFor="edit-address" className="mb-1.5 block text-sm font-semibold text-ink">
                       Adresse
                     </label>
@@ -455,18 +499,24 @@ export default function AccountPage() {
                   type="button"
                   onClick={locate}
                   disabled={geoLoading}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition hover:border-action hover:text-action disabled:opacity-50"
+                  className="mt-4 inline-flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-semibold text-ink transition active:border-action active:text-action disabled:opacity-50 sm:w-auto md:min-h-0 md:hover:border-action md:hover:text-action"
                 >
-                  <LocateFixed className="h-4 w-4" />
+                  <LocateFixed className="size-4" aria-hidden="true" />
                   {geoLoading ? 'Localisation en cours...' : 'Utiliser ma position'}
                 </button>
                 {geoInfo && (
-                  <p className="mt-2 rounded-lg bg-success-soft px-3 py-2 text-sm text-success">
+                  <p
+                    role="status"
+                    className="mt-2 break-words rounded-lg bg-success-soft px-3 py-2 text-sm text-success"
+                  >
                     {geoInfo}
                   </p>
                 )}
                 {geoError && (
-                  <p className="mt-2 rounded-lg bg-action-soft px-3 py-2 text-sm text-alert">
+                  <p
+                    role="alert"
+                    className="mt-2 break-words rounded-lg bg-action-soft px-3 py-2 text-sm text-alert"
+                  >
                     {geoError}
                   </p>
                 )}
@@ -475,27 +525,30 @@ export default function AccountPage() {
                 )}
 
                 <p className="mt-4 text-xs text-gray-500">
-                  L'email sert à vous connecter, il ne peut pas être modifié ici.
+                  L&apos;email sert à vous connecter, il ne peut pas être modifié ici.
                 </p>
 
                 {saveError && (
-                  <p className="mt-3 rounded-lg bg-action-soft px-3 py-2 text-sm text-alert">
+                  <p
+                    role="alert"
+                    className="mt-3 break-words rounded-lg bg-action-soft px-3 py-2 text-sm text-alert"
+                  >
                     {saveError}
                   </p>
                 )}
 
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <button
                     type="submit"
                     disabled={saving}
-                    className="rounded-lg bg-action px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-action-dark disabled:opacity-50"
+                    className="min-h-12 touch-manipulation rounded-lg bg-action px-5 py-2.5 text-sm font-semibold text-white transition active:bg-action-dark disabled:opacity-50 md:min-h-0 md:hover:bg-action-dark"
                   >
                     {saving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setEditing(false)}
-                    className="rounded-lg border border-line px-5 py-2.5 text-sm font-medium text-ink transition hover:bg-canvas"
+                    className="min-h-12 touch-manipulation rounded-lg border border-line px-5 py-2.5 text-sm font-medium text-ink transition active:bg-canvas md:min-h-0 md:hover:bg-canvas"
                   >
                     Annuler
                   </button>
@@ -506,43 +559,45 @@ export default function AccountPage() {
                 <div className="mt-5 space-y-3 border-t border-line pt-5 text-sm text-gray-700">
                   {customer.email && (
                     <p className="flex items-start gap-3">
-                      <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-                      <span className="break-all">{customer.email}</span>
+                      <Mail className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      <span className="min-w-0 break-all">{customer.email}</span>
                     </p>
                   )}
                   {customer.phone && (
                     <p className="flex items-start gap-3">
-                      <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-                      {customer.phone}
+                      <Phone className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      <span className="min-w-0 break-words">{customer.phone}</span>
                     </p>
                   )}
                   {location && (
                     <p className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
-                      {location}
+                      <MapPin className="mt-0.5 size-4 shrink-0 text-gray-400" aria-hidden="true" />
+                      <span className="min-w-0 break-words">{location}</span>
                     </p>
                   )}
                 </div>
 
                 <button
+                  type="button"
                   onClick={startEdit}
-                  className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-ink px-4 py-2 text-sm font-semibold text-ink transition hover:bg-ink hover:text-white"
+                  className="mt-5 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-ink px-4 py-2 text-sm font-semibold text-ink transition active:bg-ink active:text-white md:min-h-0 md:hover:bg-ink md:hover:text-white"
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="size-4" aria-hidden="true" />
                   Modifier mes informations
                 </button>
 
                 <Link
                   href="/mon-compte/messages"
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-action bg-action/5 px-4 py-2 text-sm font-semibold text-action transition hover:bg-action hover:text-white"
+                  className="mt-3 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-action bg-action/5 px-4 py-2 text-sm font-semibold text-action transition active:bg-action active:text-white md:min-h-0 md:hover:bg-action md:hover:text-white"
                 >
-                  <MessageSquare className="h-4 w-4" />
+                  <MessageSquare className="size-4" aria-hidden="true" />
                   Mes messages
                 </Link>
               </>
             )}
 
             <button
+              type="button"
               onClick={() => {
                 logout();
                 setHasToken(false);
@@ -550,34 +605,36 @@ export default function AccountPage() {
                 setLoggedOut(true);
                 window.scrollTo({ top: 0 });
               }}
-              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-action transition hover:text-action-dark"
+              className="mt-3 inline-flex min-h-11 touch-manipulation items-center gap-2 text-sm font-semibold text-action transition active:text-action-dark md:mt-5 md:min-h-0 md:hover:text-action-dark"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="size-4" aria-hidden="true" />
               Se déconnecter
             </button>
           </section>
 
-          <section className={`${cardClass} p-5 sm:p-6`}>
+          <section className={`${cardClass} min-w-0 p-5 sm:p-6`}>
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="flex items-center gap-2 text-xl font-bold text-ink">
-                <Package className="h-5 w-5 text-action" />
+                <Package className="size-5 text-action" aria-hidden="true" />
                 Mes commandes
               </h2>
               {orders && (
-                <span className="text-sm text-gray-500">
+                <span className="shrink-0 text-sm text-gray-500">
                   {orders.length} commande{orders.length > 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             {orders === null ? (
-              <p className="py-6 text-gray-500">Chargement...</p>
+              <p role="status" className="py-6 text-gray-500">
+                Chargement...
+              </p>
             ) : orders.length === 0 ? (
               <div className="py-8 text-center">
                 <p className="text-gray-500">Aucune commande pour le moment.</p>
                 <Link
                   href="/boutique"
-                  className="mt-4 inline-block rounded-lg bg-action px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-action-dark"
+                  className="mt-4 flex min-h-12 w-full touch-manipulation items-center justify-center rounded-lg bg-action px-5 py-2.5 text-sm font-semibold text-white transition active:bg-action-dark md:inline-block md:min-h-0 md:w-auto md:hover:bg-action-dark"
                 >
                   Découvrir la boutique
                 </Link>
@@ -585,19 +642,16 @@ export default function AccountPage() {
             ) : (
               <div className="divide-y divide-line">
                 {orders.map((o) => {
-                  const count = (o.items || []).reduce(
-                    (s: number, i: any) => s + i.quantity,
-                    0,
-                  );
+                  const count = (o.items || []).reduce((s, i) => s + i.quantity, 0);
                   const ongoing = o.status !== 'DELIVERED' && o.status !== 'CANCELLED';
                   return (
                     <Link
                       key={o.id}
                       href={trackingUrl(o.orderNumber, o.customerPhone)}
-                      className="group flex flex-wrap items-center gap-3 py-3.5"
+                      className="group -mx-2 flex touch-manipulation flex-wrap items-center gap-3 rounded-lg px-2 py-3.5 transition active:bg-canvas md:mx-0 md:px-0 md:active:bg-transparent"
                     >
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-action-soft text-action">
-                        <Package className="h-5 w-5" />
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-action-soft text-action">
+                        <Package className="size-5" aria-hidden="true" />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="break-all font-semibold text-ink">{o.orderNumber}</p>
@@ -606,7 +660,9 @@ export default function AccountPage() {
                           {count > 1 ? 's' : ''}
                         </p>
                       </div>
-                      <div className="ml-auto flex items-center gap-3">
+                      {/* Mobile : prix et statut sur une 2e ligne, alignés sous le texte.
+                          À partir de sm : une seule ligne, comme avant. */}
+                      <div className="flex w-full items-center justify-between gap-3 pl-13 sm:ml-auto sm:w-auto sm:justify-start sm:pl-0">
                         <span className="whitespace-nowrap text-sm font-bold text-ink">
                           {formatPrice(o.total)}
                         </span>
@@ -617,9 +673,9 @@ export default function AccountPage() {
                         >
                           {STATUS_LABELS[o.status] || o.status}
                         </span>
-                        <span className="hidden items-center gap-1 text-sm font-semibold text-ink transition group-hover:text-action sm:inline-flex">
-                          {ongoing ? 'Suivre' : 'Détails'}
-                          <ChevronRight className="h-4 w-4" />
+                        <span className="inline-flex items-center gap-1 text-sm font-semibold text-ink transition md:group-hover:text-action">
+                          <span className="hidden sm:inline">{ongoing ? 'Suivre' : 'Détails'}</span>
+                          <ChevronRight className="size-4" aria-hidden="true" />
                         </span>
                       </div>
                     </Link>
@@ -630,7 +686,7 @@ export default function AccountPage() {
 
             <Link
               href="/suivi"
-              className="mt-4 inline-block text-sm font-medium text-ink underline transition hover:text-action"
+              className="mt-4 inline-flex min-h-11 touch-manipulation items-center text-sm font-medium text-ink underline transition active:text-action md:min-h-0 md:hover:text-action"
             >
               Suivre une commande passée sans compte
             </Link>

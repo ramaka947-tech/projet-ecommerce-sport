@@ -1,10 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Search, Send, Loader2, MoreVertical, Trash2, CheckCircle2, User } from 'lucide-react';
+import { Search, Send, Loader2, Trash2, CheckCircle2, User, ArrowLeft } from 'lucide-react';
 import AdminGuard from '@/lib/admin-guard';
 import { getAdminMessages, markMessageAsRead, deleteMessage, replyMessage } from '@/lib/api';
 
-// On regroupe les échanges d'un même client
 function buildThread(msg: any) {
   const thread = [
     { id: `${msg.id}-first`, author: 'CUSTOMER', content: msg.content, createdAt: msg.createdAt },
@@ -15,7 +14,6 @@ function buildThread(msg: any) {
   return thread.concat(msg.entries ?? []);
 }
 
-// Génère les initiales pour l'avatar
 const getInitials = (name: string) => {
   if (!name) return '?';
   const parts = name.split(' ').filter(Boolean);
@@ -31,13 +29,14 @@ export default function AdminMessagesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  // Sur mobile : afficher la liste OU le chat
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
 
   const load = async (keepSelection = true) => {
     setLoading(true);
     try {
       const data = await getAdminMessages();
       setMessages(data);
-      // Sélectionne le premier message par défaut si rien n'est sélectionné
       if (!keepSelection || (!selectedId && data.length > 0)) {
         setSelectedId(data[0].id);
         if (!data[0].isRead) markMessageAsRead(data[0].id);
@@ -52,9 +51,10 @@ export default function AdminMessagesPage() {
   const handleSelect = async (msg: any) => {
     setSelectedId(msg.id);
     setReplyText('');
+    setMobileChatOpen(true);
     if (!msg.isRead) {
       await markMessageAsRead(msg.id);
-      load(); // rafraichit pour enlever le badge non-lu
+      load();
     }
   };
 
@@ -62,7 +62,10 @@ export default function AdminMessagesPage() {
     e.stopPropagation();
     if (!confirm('Supprimer cette conversation ?')) return;
     await deleteMessage(id);
-    if (selectedId === id) setSelectedId(null);
+    if (selectedId === id) {
+      setSelectedId(null);
+      setMobileChatOpen(false);
+    }
     load();
   };
 
@@ -90,22 +93,17 @@ export default function AdminMessagesPage() {
 
   return (
     <AdminGuard>
-      <div className="h-[calc(100vh-8rem)] flex flex-col">
-        
-        {/* En-tête de la page */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-ink">Messages de contact</h1>
-          <p className="text-sm text-ink/60 mt-1">Répondez aux messages de vos clients rapidement.</p>
+      <div className="flex h-[calc(100dvh-8rem)] flex-col md:h-[calc(100vh-8rem)]">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl font-bold text-ink md:text-2xl">Messages de contact</h1>
+          <p className="mt-1 text-sm text-ink/60">Répondez aux messages de vos clients rapidement.</p>
         </div>
 
-        {/* Conteneur principal : 2 colonnes */}
-        <div className="flex-1 bg-white border border-line rounded-2xl shadow-sm flex overflow-hidden">
-          
-          {/* --- COLONNE GAUCHE : LISTE DES CONVERSATIONS --- */}
-          <div className="w-80 border-r border-line flex flex-col bg-white shrink-0">
-            
-            <div className="p-4 border-b border-line space-y-3">
-              <h2 className="font-bold text-lg text-ink">Conversations</h2>
+        <div className="flex flex-1 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+          {/* LISTE — cachée sur mobile si chat ouvert */}
+          <div className={`w-full flex-col border-r border-line bg-white md:flex md:w-80 md:shrink-0 ${mobileChatOpen ? 'hidden' : 'flex'}`}>
+            <div className="space-y-3 border-b border-line p-3 md:p-4">
+              <h2 className="text-base font-bold text-ink md:text-lg">Conversations</h2>
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink/40" />
                 <input
@@ -113,20 +111,26 @@ export default function AdminMessagesPage() {
                   placeholder="Rechercher un client..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-canvas/50 border border-line rounded-lg text-sm focus:outline-none focus:border-action"
+                  className="min-h-11 w-full rounded-lg border border-line bg-canvas/50 pl-9 pr-3 text-base focus:border-action focus:outline-none md:min-h-0 md:py-2 md:text-sm"
                 />
               </div>
-              
-              <div className="flex gap-2">
-                <button onClick={() => setFilter('all')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === 'all' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>Tous ({messages.length})</button>
-                <button onClick={() => setFilter('unread')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === 'unread' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>Non lus ({messages.filter(m => !m.isRead).length})</button>
-                <button onClick={() => setFilter('read')} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${filter === 'read' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>Lus ({messages.filter(m => m.isRead).length})</button>
+
+              <div className="flex gap-2 overflow-x-auto">
+                <button onClick={() => setFilter('all')} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${filter === 'all' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>
+                  Tous ({messages.length})
+                </button>
+                <button onClick={() => setFilter('unread')} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${filter === 'unread' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>
+                  Non lus ({messages.filter(m => !m.isRead).length})
+                </button>
+                <button onClick={() => setFilter('read')} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${filter === 'read' ? 'bg-action text-white' : 'bg-canvas text-ink/60 hover:text-ink'}`}>
+                  Lus ({messages.filter(m => m.isRead).length})
+                </button>
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto">
               {loading && messages.length === 0 ? (
-                <div className="p-8 flex justify-center text-ink/40"><Loader2 className="animate-spin" /></div>
+                <div className="flex justify-center p-8 text-ink/40"><Loader2 className="animate-spin" /></div>
               ) : filtered.length === 0 ? (
                 <div className="p-8 text-center text-sm text-ink/40">Aucune conversation.</div>
               ) : (
@@ -136,25 +140,23 @@ export default function AdminMessagesPage() {
                     <div
                       key={m.id}
                       onClick={() => handleSelect(m)}
-                      className={`flex items-start gap-3 p-4 border-b border-line cursor-pointer transition-colors ${isSelected ? 'bg-action-soft/30 border-l-4 border-l-action' : 'hover:bg-canvas border-l-4 border-l-transparent'}`}
+                      className={`flex cursor-pointer items-start gap-3 border-b border-line p-3 transition-colors md:p-4 ${isSelected ? 'border-l-4 border-l-action bg-action-soft/30' : 'border-l-4 border-l-transparent hover:bg-canvas'}`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold text-white ${m.isRead ? 'bg-ink/40' : 'bg-action'}`}>
+                      <div className={`flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${m.isRead ? 'bg-ink/40' : 'bg-action'}`}>
                         {getInitials(m.name)}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline mb-0.5">
-                          <p className="font-bold text-ink truncate">{m.name}</p>
-                          <span className="text-[10px] text-ink/40 whitespace-nowrap ml-2">
-                            {new Date(m.createdAt).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                      <div className="min-w-0 flex-1">
+                        <div className="mb-0.5 flex items-baseline justify-between">
+                          <p className="truncate font-bold text-ink">{m.name}</p>
+                          <span className="ml-2 whitespace-nowrap text-[10px] text-ink/40">
+                            {new Date(m.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
-                        <p className="text-xs text-ink/50 truncate mb-1">{m.email}</p>
-                        <p className={`text-xs truncate ${m.isRead ? 'text-ink/40' : 'text-ink/80 font-medium'}`}>{m.content}</p>
+                        <p className="mb-1 truncate text-xs text-ink/50">{m.email}</p>
+                        <p className={`truncate text-xs ${m.isRead ? 'text-ink/40' : 'font-medium text-ink/80'}`}>{m.content}</p>
                       </div>
                       {!m.isRead && (
-                        <div className="w-5 h-5 rounded-full bg-action text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-1">
-                          1
-                        </div>
+                        <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-action text-[10px] font-bold text-white">1</div>
                       )}
                     </div>
                   );
@@ -163,58 +165,67 @@ export default function AdminMessagesPage() {
             </div>
           </div>
 
-          {/* --- COLONNE DROITE : FIL DE DISCUSSION --- */}
-          <div className="flex-1 flex flex-col bg-canvas/30">
+          {/* CHAT — caché sur mobile si non ouvert */}
+          <div className={`flex-1 flex-col bg-canvas/30 md:flex ${mobileChatOpen ? 'flex' : 'hidden'}`}>
             {!selectedMsg ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-ink/40">
+              <div className="flex flex-1 flex-col items-center justify-center text-ink/40">
                 <User size={48} className="mb-4 opacity-20" />
                 <p className="font-medium">Sélectionnez une conversation</p>
                 <p className="text-sm">pour voir les messages et répondre.</p>
               </div>
             ) : (
               <>
-                {/* En-tête du chat */}
-                <div className="h-20 bg-white border-b border-line px-6 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-action text-white flex items-center justify-center font-bold">
+                {/* En-tête chat */}
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line bg-white px-3 py-2 md:h-20 md:px-6 md:py-0">
+                  <div className="flex min-w-0 items-center gap-2 md:gap-4">
+                    <button
+                      onClick={() => setMobileChatOpen(false)}
+                      aria-label="Retour aux conversations"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-lg text-ink/60 hover:bg-canvas md:hidden"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-action font-bold text-white md:size-10">
                       {getInitials(selectedMsg.name)}
                     </div>
-                    <div>
-                      <h2 className="font-bold text-ink text-lg">{selectedMsg.name}</h2>
-                      <div className="flex items-center gap-2 text-sm text-ink/50">
-                        <span>{selectedMsg.email}</span>
-                        <span className="bg-action/10 text-action px-2 py-0.5 rounded text-[10px] font-bold">Client</span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-sm font-bold text-ink md:text-lg">{selectedMsg.name}</h2>
+                      <div className="flex min-w-0 items-center gap-2 text-xs text-ink/50 md:text-sm">
+                        <span className="truncate">{selectedMsg.email}</span>
+                        <span className="hidden shrink-0 rounded bg-action/10 px-2 py-0.5 text-[10px] font-bold text-action sm:inline">Client</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-ink/60">
-                    <span className="font-medium">Sujet : {selectedMsg.subject || 'Général'}</span>
-                    <span>Reçu le {new Date(selectedMsg.createdAt).toLocaleDateString('fr-FR')}</span>
-                    <button onClick={(e) => handleDelete(selectedMsg.id, e)} className="p-2 text-action hover:bg-action-soft rounded-lg transition" title="Supprimer">
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="hidden text-sm text-ink/60 md:flex md:items-center md:gap-4">
+                      <span className="font-medium">Sujet : {selectedMsg.subject || 'Général'}</span>
+                      <span>Reçu le {new Date(selectedMsg.createdAt).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    <button onClick={(e) => handleDelete(selectedMsg.id, e)} aria-label="Supprimer" className="flex size-10 items-center justify-center rounded-lg text-action transition hover:bg-action-soft">
                       <Trash2 size={18} />
                     </button>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 space-y-4 overflow-y-auto p-3 md:space-y-6 md:p-6">
                   {thread.map((item) => {
                     const isAdmin = item.author === 'ADMIN';
                     return (
-                      <div key={item.id} className={`flex gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}>
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold text-white mt-1 ${isAdmin ? 'bg-ink' : 'bg-action'}`}>
+                      <div key={item.id} className={`flex gap-2 md:gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}>
+                        <div className={`mt-1 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white md:size-8 ${isAdmin ? 'bg-ink' : 'bg-action'}`}>
                           {isAdmin ? 'A' : getInitials(selectedMsg.name)}
                         </div>
-                        <div className={`max-w-[70%] ${isAdmin ? 'items-end' : 'items-start'} flex flex-col`}>
-                          <div className="flex items-baseline gap-2 mb-1">
+                        <div className={`flex max-w-[80%] flex-col md:max-w-[70%] ${isAdmin ? 'items-end' : 'items-start'}`}>
+                          <div className="mb-1 flex items-baseline gap-2">
                             <span className="text-xs font-semibold text-ink">{isAdmin ? 'Admin' : selectedMsg.name}</span>
-                            <span className="text-[10px] text-ink/40">{new Date(item.createdAt).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}</span>
+                            <span className="text-[10px] text-ink/40">{new Date(item.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
-                          <div className={`p-4 rounded-2xl text-sm whitespace-pre-wrap ${isAdmin ? 'bg-ink text-white rounded-tr-sm' : 'bg-white text-ink border border-line rounded-tl-sm shadow-sm'}`}>
+                          <div className={`whitespace-pre-wrap rounded-2xl p-3 text-sm md:p-4 ${isAdmin ? 'rounded-tr-sm bg-ink text-white' : 'rounded-tl-sm border border-line bg-white text-ink shadow-sm'}`}>
                             {item.content}
                           </div>
                           {isAdmin && (
-                            <span className="text-[10px] text-ink/40 mt-1 flex items-center gap-1">
+                            <span className="mt-1 flex items-center gap-1 text-[10px] text-ink/40">
                               <CheckCircle2 size={12} /> Lu
                             </span>
                           )}
@@ -224,24 +235,25 @@ export default function AdminMessagesPage() {
                   })}
                 </div>
 
-                {/* Zone de saisie */}
-                <div className="p-4 bg-white border-t border-line shrink-0">
-                  <div className="flex gap-3">
+                {/* Saisie */}
+                <div className="shrink-0 border-t border-line bg-white p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] md:p-4 md:pb-4">
+                  <div className="flex gap-2 md:gap-3">
                     <input
                       type="text"
                       placeholder="Écrivez votre réponse..."
                       value={replyText}
                       onChange={e => setReplyText(e.target.value)}
-                      onKeyDown={e => { if(e.key === 'Enter') handleReply(); }}
-                      className="flex-1 border border-line rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-action bg-canvas/30"
+                      onKeyDown={e => { if (e.key === 'Enter') handleReply(); }}
+                      className="min-h-11 flex-1 rounded-xl border border-line bg-canvas/30 px-3 text-base focus:border-action focus:outline-none md:min-h-0 md:px-4 md:py-3 md:text-sm"
                     />
                     <button
                       onClick={handleReply}
                       disabled={sending || !replyText.trim()}
-                      className="bg-action text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-action-dark transition disabled:opacity-50 flex items-center gap-2"
+                      aria-label="Envoyer"
+                      className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-action px-3 font-semibold text-sm text-white transition hover:bg-action-dark disabled:opacity-50 md:min-h-0 md:px-6 md:py-3"
                     >
                       {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                      Envoyer
+                      <span className="hidden sm:inline">Envoyer</span>
                     </button>
                   </div>
                 </div>

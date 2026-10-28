@@ -7,8 +7,8 @@ import {
   createProduct, updateProduct, uploadImage, getSizes, getColors, getBrands,
 } from '@/lib/api';
 import { compareSizes, sizeGroupOf } from '@/lib/sizes';
-import { 
-  X, Check, ImagePlus, Tag, List, Info, Percent, 
+import {
+  X, Check, ImagePlus, Tag, List, Info, Percent,
   Settings2, Trash2, UploadCloud
 } from 'lucide-react';
 
@@ -90,8 +90,6 @@ export default function ProductForm({ categories, product }: Props) {
     }));
   };
 
-  const isShoes = sizeGroup.toLowerCase().startsWith('chaussure');
-
   const toggleSize = (name: string) => setForm((f) => ({
     ...f,
     sizes: f.sizes.includes(name) ? f.sizes.filter((s: string) => s !== name) : [...f.sizes, name],
@@ -168,81 +166,79 @@ export default function ProductForm({ categories, product }: Props) {
     }
   };
 
-  const inputCls = "w-full rounded-lg border border-line bg-white px-3 py-2.5 text-sm text-ink focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20 transition-colors";
+  const inputCls = 'min-h-11 w-full rounded-lg border border-line bg-white px-3 py-2.5 text-base text-ink transition-colors focus:border-action focus:outline-none focus:ring-2 focus:ring-action/20 md:min-h-0 md:text-sm';
+  const labelCls = 'mb-1.5 block text-sm font-semibold text-ink';
 
   return (
     <form onSubmit={handleSubmit}>
-      
-      {/* Barre d'actions en haut */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      {/* Barre d'actions */}
+      <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-ink">{isEdit ? 'Modifier le produit' : 'Nouveau produit'}</h1>
-          <p className="text-sm text-ink/60 mt-1">Modifiez les informations du produit ci-dessous.</p>
+          <h1 className="text-xl font-bold text-ink md:text-2xl">{isEdit ? 'Modifier le produit' : 'Nouveau produit'}</h1>
+          <p className="mt-1 text-sm text-ink/60">Modifiez les informations du produit ci-dessous.</p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <Link href="/admin/produits" className="flex-1 md:flex-none text-center px-5 py-2.5 rounded-lg border border-line text-ink font-semibold hover:bg-canvas transition">
+        <div className="flex flex-col gap-2 sm:flex-row md:w-auto">
+          <Link href="/admin/produits" className="flex min-h-11 flex-1 items-center justify-center rounded-lg border border-line px-5 text-center font-semibold text-ink transition hover:bg-canvas md:min-h-0 md:flex-none md:py-2.5">
             Annuler
           </Link>
-          <button type="submit" disabled={loading} className="flex-1 md:flex-none bg-ink text-white font-semibold px-5 py-2.5 rounded-lg hover:bg-ink/90 transition disabled:opacity-50">
+          <button type="submit" disabled={loading} className="min-h-11 flex-1 rounded-lg bg-ink px-5 font-semibold text-white transition hover:bg-ink/90 disabled:opacity-50 md:min-h-0 md:flex-none md:py-2.5">
             {loading ? 'Enregistrement...' : 'Enregistrer'}
           </button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
-        
+      <div className="grid items-start gap-4 md:gap-6 lg:grid-cols-[1.5fr_1fr]">
         {/* COLONNE GAUCHE */}
-        <div className="space-y-6">
-          
-          {/* Informations générales */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
-              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><Info size={18} /></div>
-              <h2 className="text-lg font-bold text-ink">Informations générales</h2>
+        <div className="min-w-0 space-y-4 md:space-y-6">
+          {/* Infos générales */}
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3 border-b border-line pb-3 md:mb-5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-action text-white"><Info size={18} /></div>
+              <h2 className="text-base font-bold text-ink md:text-lg">Informations générales</h2>
             </div>
-            
+
             <div className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">Nom du produit *</label>
-                  <input name="name" required value={form.name} onChange={handleChange} className={inputCls} />
+                  <label htmlFor="p_name" className={labelCls}>Nom du produit *</label>
+                  <input id="p_name" name="name" required value={form.name} onChange={handleChange} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">SKU *</label>
-                  <input name="sku" required value={form.sku} onChange={handleChange} className={inputCls} />
-                </div>
-              </div>
-              
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">Prix (FCFA) *</label>
-                  <input name="price" type="number" required value={form.price} onChange={handleChange} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">Stock *</label>
-                  <input name="stock" type="number" required value={form.stock} onChange={handleChange} className={inputCls} />
+                  <label htmlFor="p_sku" className={labelCls}>SKU *</label>
+                  <input id="p_sku" name="sku" required value={form.sku} onChange={handleChange} className={inputCls} />
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">Catégorie *</label>
-                  <select name="categoryId" required value={form.categoryId} onChange={handleChange} className={inputCls}>
+                  <label htmlFor="p_price" className={labelCls}>Prix (FCFA) *</label>
+                  <input id="p_price" name="price" type="number" inputMode="numeric" required value={form.price} onChange={handleChange} className={inputCls} />
+                </div>
+                <div>
+                  <label htmlFor="p_stock" className={labelCls}>Stock *</label>
+                  <input id="p_stock" name="stock" type="number" inputMode="numeric" required value={form.stock} onChange={handleChange} className={inputCls} />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="p_cat" className={labelCls}>Catégorie *</label>
+                  <select id="p_cat" name="categoryId" required value={form.categoryId} onChange={handleChange} className={inputCls}>
                     <option value="">-- Choisir --</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold mb-1.5">Marques (optionnel)</label>
-                  <div className="flex flex-wrap gap-2 border border-line rounded-lg p-1.5 bg-canvas/30 min-h-[46px]">
+                  <label className={labelCls}>Marques (optionnel)</label>
+                  <div className="flex min-h-11 flex-wrap gap-2 rounded-lg border border-line bg-canvas/30 p-1.5">
                     {form.brands.map((b: string) => (
-                      <span key={b} className="inline-flex items-center gap-1 bg-white border border-line rounded-md px-2 py-1 text-xs font-medium">
+                      <span key={b} className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs font-medium">
                         {b} <button type="button" onClick={() => toggleBrand(b)} className="hover:text-action"><X size={12} /></button>
                       </span>
                     ))}
-                    <select 
-                      onChange={(e) => { if(e.target.value) { toggleBrand(e.target.value); e.target.value = ""; } }} 
-                      className="bg-transparent text-sm outline-none flex-1 min-w-[100px]"
+                    <select
+                      onChange={(e) => { if (e.target.value) { toggleBrand(e.target.value); e.target.value = ""; } }}
+                      className="min-w-[100px] flex-1 bg-transparent text-sm outline-none"
                     >
                       <option value="">+ Ajouter</option>
                       {availableBrands.filter(b => !form.brands.includes(b.name)).map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
@@ -252,102 +248,105 @@ export default function ProductForm({ categories, product }: Props) {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold mb-1.5">Description courte (sous le prix)</label>
-                <textarea value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} rows={2} className={inputCls} />
+                <label htmlFor="p_short" className={labelCls}>Description courte (sous le prix)</label>
+                <textarea id="p_short" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} rows={2} className={`${inputCls} resize-none`} />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-semibold mb-1.5">Description complète</label>
-                <textarea name="description" value={form.description} onChange={handleChange} rows={4} className={inputCls} />
+                <label htmlFor="p_desc" className={labelCls}>Description complète</label>
+                <textarea id="p_desc" name="description" value={form.description} onChange={handleChange} rows={4} className={`${inputCls} resize-none`} />
               </div>
             </div>
 
-            {/* Promotion (dans le même bloc) */}
-            <div className="mt-6 p-4 rounded-xl border border-action/20 bg-action/5">
-              <div className="flex items-center justify-between mb-4">
+            {/* Promotion */}
+            <div className="mt-6 rounded-xl border border-action/20 bg-action/5 p-4">
+              <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 font-bold text-action"><Percent size={18} /> Promotion</div>
-                <button type="button" onClick={() => setOnSale(!onSale)} className={`w-10 h-5 rounded-full relative transition-colors ${onSale ? 'bg-action' : 'bg-line'}`}>
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${onSale ? 'left-[22px]' : 'left-0.5'}`} />
+                <button type="button" onClick={() => setOnSale(!onSale)} className={`relative h-5 w-10 rounded-full transition-colors ${onSale ? 'bg-action' : 'bg-line'}`}>
+                  <div className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${onSale ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
               </div>
               {onSale && (
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-semibold mb-1.5">Prix promo (FCFA)</label>
-                    <input name="promoPrice" type="number" required value={form.promoPrice} onChange={handleChange} className={inputCls} />
+                    <label htmlFor="p_promo" className="mb-1.5 block text-xs font-semibold">Prix promo (FCFA)</label>
+                    <input id="p_promo" name="promoPrice" type="number" inputMode="numeric" required value={form.promoPrice} onChange={handleChange} className={inputCls} />
                   </div>
                 </div>
               )}
             </div>
           </section>
 
-          {/* Points forts & caractéristiques */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
-              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><List size={18} /></div>
-              <h2 className="text-lg font-bold text-ink">Détails du produit</h2>
+          {/* Détails */}
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3 border-b border-line pb-3 md:mb-5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-action text-white"><List size={18} /></div>
+              <h2 className="text-base font-bold text-ink md:text-lg">Détails du produit</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-1.5">Points forts (un par ligne)</label>
-                <textarea value={highlightsText} onChange={(e) => setHighlightsText(e.target.value)} rows={3} className={inputCls} />
+                <label htmlFor="p_high" className={labelCls}>Points forts (un par ligne)</label>
+                <textarea id="p_high" value={highlightsText} onChange={(e) => setHighlightsText(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-semibold mb-1.5">Caractéristiques</label>
+                <label className={labelCls}>Caractéristiques</label>
                 {specs.map((s, i) => (
-                  <div key={i} className="flex gap-2 mb-2 items-center">
+                  <div key={i} className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                     <input value={s.label} onChange={(e) => updateSpec(i, { label: e.target.value })} placeholder="Libellé" className={`${inputCls} flex-1`} />
                     <input value={s.value} onChange={(e) => updateSpec(i, { value: e.target.value })} placeholder="Valeur" className={`${inputCls} flex-1`} />
-                    <button type="button" onClick={() => removeSpec(i)} className="p-2 text-action hover:bg-action-soft rounded-lg"><Trash2 size={16}/></button>
+                    <button type="button" onClick={() => removeSpec(i)} aria-label="Supprimer" className="flex size-10 shrink-0 items-center justify-center self-end rounded-lg text-action hover:bg-action-soft sm:self-auto">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 ))}
-                <button type="button" onClick={addSpec} className="text-sm font-semibold text-action mt-2 hover:underline">+ Ajouter une caractéristique</button>
+                <button type="button" onClick={addSpec} className="mt-2 min-h-11 text-sm font-semibold text-action hover:underline md:min-h-0">
+                  + Ajouter une caractéristique
+                </button>
               </div>
             </div>
           </section>
         </div>
 
         {/* COLONNE DROITE */}
-        <div className="space-y-6">
-          
+        <div className="min-w-0 space-y-4 md:space-y-6">
           {/* Images */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-5 border-b border-line pb-3">
-              <div className="w-8 h-8 rounded-lg bg-action text-white flex items-center justify-center"><ImagePlus size={18} /></div>
-              <h2 className="text-lg font-bold text-ink">Images du produit</h2>
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3 border-b border-line pb-3 md:mb-5">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-action text-white"><ImagePlus size={18} /></div>
+              <h2 className="text-base font-bold text-ink md:text-lg">Images du produit</h2>
             </div>
-            
-            <div className="grid grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
               {form.images.map((url: string) => (
-                <div key={url} className="relative aspect-square rounded-xl border border-line overflow-hidden group">
-                  <img src={url} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => removeImage(url)} className="absolute top-1 right-1 bg-action text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition">
+                <div key={url} className="group relative aspect-square overflow-hidden rounded-xl border border-line">
+                  <img src={url} alt="" className="size-full object-cover" />
+                  <button type="button" onClick={() => removeImage(url)} aria-label="Supprimer l'image" className="absolute right-1 top-1 flex size-7 items-center justify-center rounded-full bg-action text-white opacity-100 transition md:opacity-0 md:group-hover:opacity-100">
                     <X size={14} />
                   </button>
                 </div>
               ))}
-              
-              <label className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-line rounded-xl hover:border-action hover:bg-action/5 cursor-pointer transition text-ink/50 hover:text-action">
-                <UploadCloud size={24} className="mb-2" />
-                <span className="text-xs font-semibold">{uploading ? 'Chargement...' : 'Ajouter'}</span>
+
+              <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-line text-ink/50 transition hover:border-action hover:bg-action/5 hover:text-action">
+                <UploadCloud size={24} className="mb-1 md:mb-2" />
+                <span className="text-[10px] font-semibold md:text-xs">{uploading ? 'Chargement...' : 'Ajouter'}</span>
                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} disabled={uploading} className="hidden" />
               </label>
             </div>
           </section>
 
           {/* Tailles */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Settings2 size={14} /></div>
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex size-6 items-center justify-center rounded bg-action/10 text-action"><Settings2 size={14} /></div>
               <h2 className="text-sm font-bold text-ink">Tailles disponibles</h2>
             </div>
-            
+
             {groups.length > 1 && (
-              <div className="flex bg-canvas rounded-lg p-1 mb-4">
+              <div className="mb-4 flex overflow-x-auto rounded-lg bg-canvas p-1">
                 {groups.map((g) => (
-                  <button key={g} type="button" onClick={() => changeSizeGroup(g)} className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition ${sizeGroup === g ? 'bg-white shadow-sm text-ink' : 'text-ink/50 hover:text-ink'}`}>
+                  <button key={g} type="button" onClick={() => changeSizeGroup(g)} className={`shrink-0 flex-1 rounded-md px-2 py-2 text-xs font-semibold transition ${sizeGroup === g ? 'bg-white text-ink shadow-sm' : 'text-ink/50 hover:text-ink'}`}>
                     {g}
                   </button>
                 ))}
@@ -356,7 +355,7 @@ export default function ProductForm({ categories, product }: Props) {
 
             <div className="flex flex-wrap gap-2">
               {visibleSizes.map((s) => (
-                <button key={s.id} type="button" onClick={() => toggleSize(s.name)} className={`w-10 h-10 rounded-lg border text-sm font-medium transition flex items-center justify-center ${form.sizes.includes(s.name) ? 'border-action bg-action/5 text-action' : 'border-line hover:border-ink/30 text-ink/70'}`}>
+                <button key={s.id} type="button" onClick={() => toggleSize(s.name)} className={`flex size-11 items-center justify-center rounded-lg border text-sm font-medium transition md:size-10 ${form.sizes.includes(s.name) ? 'border-action bg-action/5 text-action' : 'border-line text-ink/70 hover:border-ink/30'}`}>
                   {s.name}
                 </button>
               ))}
@@ -364,15 +363,15 @@ export default function ProductForm({ categories, product }: Props) {
           </section>
 
           {/* Couleurs */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Tag size={14} /></div>
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex size-6 items-center justify-center rounded bg-action/10 text-action"><Tag size={14} /></div>
               <h2 className="text-sm font-bold text-ink">Couleurs disponibles</h2>
             </div>
             <div className="flex flex-wrap gap-2">
               {availableColors.map((c) => (
-                <button key={c.id} type="button" onClick={() => toggleColor(c.name)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition ${form.colors.includes(c.name) ? 'border-action bg-action/5 text-action' : 'border-line hover:border-ink/30 text-ink/70'}`}>
-                  <span className="w-3 h-3 rounded-full border border-black/10" style={{ backgroundColor: c.hex || '#ccc' }} />
+                <button key={c.id} type="button" onClick={() => toggleColor(c.name)} className={`flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition ${form.colors.includes(c.name) ? 'border-action bg-action/5 text-action' : 'border-line text-ink/70 hover:border-ink/30'}`}>
+                  <span className="size-3 shrink-0 rounded-full border border-black/10" style={{ backgroundColor: c.hex || '#ccc' }} />
                   {c.name}
                 </button>
               ))}
@@ -380,35 +379,34 @@ export default function ProductForm({ categories, product }: Props) {
           </section>
 
           {/* Statut */}
-          <section className="bg-white rounded-2xl border border-line p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-6 h-6 rounded bg-action/10 text-action flex items-center justify-center"><Check size={14} /></div>
+          <section className="rounded-2xl border border-line bg-white p-4 shadow-sm md:p-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex size-6 items-center justify-center rounded bg-action/10 text-action"><Check size={14} /></div>
               <h2 className="text-sm font-bold text-ink">Statut du produit</h2>
             </div>
-            
+
             <div className="space-y-4">
-              <label className="flex items-center justify-between cursor-pointer">
+              <label className="flex min-h-11 cursor-pointer items-center justify-between md:min-h-0">
                 <span className="text-sm font-medium">Visible dans la boutique</span>
-                <div className={`w-10 h-5 rounded-full relative transition-colors ${form.isPublished ? 'bg-action' : 'bg-line'}`}>
+                <div className={`relative h-5 w-10 rounded-full transition-colors ${form.isPublished ? 'bg-action' : 'bg-line'}`}>
                   <input type="checkbox" name="isPublished" checked={form.isPublished} onChange={handleChange} className="hidden" />
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.isPublished ? 'left-[22px]' : 'left-0.5'}`} />
+                  <div className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.isPublished ? 'left-[22px]' : 'left-0.5'}`} />
                 </div>
               </label>
-              
-              <label className="flex items-center justify-between cursor-pointer">
+
+              <label className="flex min-h-11 cursor-pointer items-center justify-between md:min-h-0">
                 <span className="text-sm font-medium">Mettre en avant (Accueil)</span>
-                <div className={`w-10 h-5 rounded-full relative transition-colors ${form.isFeatured ? 'bg-action' : 'bg-line'}`}>
+                <div className={`relative h-5 w-10 rounded-full transition-colors ${form.isFeatured ? 'bg-action' : 'bg-line'}`}>
                   <input type="checkbox" name="isFeatured" checked={form.isFeatured} onChange={handleChange} className="hidden" />
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${form.isFeatured ? 'left-[22px]' : 'left-0.5'}`} />
+                  <div className={`absolute top-0.5 size-4 rounded-full bg-white transition-transform ${form.isFeatured ? 'left-[22px]' : 'left-0.5'}`} />
                 </div>
               </label>
             </div>
           </section>
-
         </div>
       </div>
 
-      {error && <div className="mt-6 p-4 bg-action-soft border border-action/20 text-action rounded-lg">{error}</div>}
+      {error && <div className="mt-6 rounded-lg border border-action/20 bg-action-soft p-4 text-action">{error}</div>}
     </form>
   );
 }
