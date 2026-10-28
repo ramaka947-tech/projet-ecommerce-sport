@@ -57,7 +57,7 @@ export class MailService {
       }
 
       const shop = await this.shopName();
-      const siteUrl = (process.env.FRONTEND_URL || 'https://projet-ecommerce-sport-63a1.vercel.app').replace(/\/$/, '');
+      const siteUrl = (process.env.FRONTEND_URL || 'https://projet-ecommerce-sport-63a1.vercel.app/admin/login').replace(/\/$/, '');
       const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = name.trim().split(/\s+/)[0] || name;
 
