@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: '/',
     name: 'AD Sport Solutions',
     short_name: 'AD Sport',
     description: "Vente de tout genre d'équipements de sport au Sénégal.",
