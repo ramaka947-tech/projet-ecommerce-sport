@@ -38,10 +38,9 @@ export class MailService {
       port,
       secure: port === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
-      pool: true,
-      connectionTimeout: 10_000,
-      greetingTimeout: 10_000,
-      socketTimeout: 15_000,
+      connectionTimeout: 30_000,
+      greetingTimeout: 30_000,
+      socketTimeout: 30_000,
       tls: {
         rejectUnauthorized: process.env.NODE_ENV === 'production',
       },
