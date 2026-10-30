@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 
 const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
 const DEFAULT_SITE_URL = 'https://projet-ecommerce-sport-63a1.vercel.app';
+const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
 
 const escapeHtml = (s: string) =>
   s
@@ -41,8 +42,71 @@ export class MailService {
     return { user, pass: pass?.replace(/\s+/g, '') };
   }
 
-  // Essaie le port 465 puis 587, en forçant l'IPv4 (évite les "Connection timeout")
+  // Accepte la clé "xkeysib-..." ou sa version encodée "eyJ..." (base64 JSON)
+  private getBrevoKey(): string | undefined {
+    const raw = process.env.BREVO_API_KEY?.trim().replace(/^["']|["']$/g, '');
+    if (!raw) return undefined;
+    if (raw.startsWith('eyJ')) {
+      try {
+        const decoded = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+        if (decoded?.api_key) return decoded.api_key as string;
+      } catch {
+        /* on garde la valeur brute */
+      }
+    }
+    return raw;
+  }
+
+  // Envoi principal : Brevo (HTTPS) si BREVO_API_KEY existe, sinon SMTP Gmail (local)
   private async send(to: string, subject: string, html: string, shop: string): Promise<boolean> {
+    if (this.getBrevoKey()) {
+      return this.sendViaBrevo(to, subject, html, shop);
+    }
+    return this.sendViaSmtp(to, subject, html, shop);
+  }
+
+  // --- Brevo : API HTTPS (fonctionne sur Render gratuit) ---
+  private async sendViaBrevo(to: string, subject: string, html: string, shop: string): Promise<boolean> {
+    // Expéditeur : BREVO_SENDER_EMAIL si défini, sinon l'adresse Gmail déjà configurée
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || this.getCredentials().user;
+    if (!senderEmail) {
+      this.logger.warn('Aucune adresse expéditeur (BREVO_SENDER_EMAIL / SMTP_USER) : email non envoyé.');
+      return false;
+    }
+
+    try {
+      const res = await fetch(BREVO_URL, {
+        method: 'POST',
+        headers: {
+          'api-key': this.getBrevoKey() as string,
+          'content-type': 'application/json',
+          accept: 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { name: shop, email: senderEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        this.logger.error(`❌ Brevo ${res.status} : ${body}`);
+        return false;
+      }
+
+      this.logger.log(`✅ Email envoyé à ${to} (Brevo)`);
+      return true;
+    } catch (err: any) {
+      this.logger.error(`❌ Brevo : ${err?.message || err}`);
+      return false;
+    }
+  }
+
+  // --- SMTP Gmail : utilisé uniquement en local (port 465 puis 587, IPv4) ---
+  private async sendViaSmtp(to: string, subject: string, html: string, shop: string): Promise<boolean> {
     const { user, pass } = this.getCredentials();
     if (!user || !pass) {
       this.logger.warn('Identifiants SMTP introuvables : email non envoyé.');
@@ -54,7 +118,6 @@ export class MailService {
       { port: 587, secure: false },
     ];
 
-    // Résolution DNS par le système (comme PowerShell), puis connexion directe à l'IPv4
     let ip = 'smtp.gmail.com';
     try {
       ip = (await dns.lookup('smtp.gmail.com', { family: 4 })).address;
@@ -71,7 +134,7 @@ export class MailService {
           port: c.port,
           tls: {
             servername: 'smtp.gmail.com',
-            // Antivirus local qui intercepte le SSL : on tolère en dev uniquement
+            // Antivirus local qui intercepte le SSL : on tolère hors production uniquement
             rejectUnauthorized: process.env.NODE_ENV === 'production',
           },
           secure: c.secure,
@@ -89,7 +152,7 @@ export class MailService {
           subject,
           html,
         });
-        this.logger.log(`✅ Email envoyé à ${to} (port ${c.port})`);
+        this.logger.log(`✅ Email envoyé à ${to} (SMTP port ${c.port})`);
         return true;
       } catch (err: any) {
         this.logger.error(`❌ Port ${c.port} : ${err?.message || err}`);
