@@ -13,7 +13,7 @@ import { getJwtSecret } from './jwt-secret.js';
     MailModule,
     JwtModule.register({
       secret: getJwtSecret(),
-      signOptions: { expiresIn: '15m' },
+      signOptions: { expiresIn: '8h' },
     }),
   ],
   controllers: [AuthController],

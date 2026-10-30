@@ -23,7 +23,7 @@ export async function authFetch(path: string, init: RequestInit = {}) {
 
   if (res.status === 401) {
     logout();
-    return new Promise<Response>(() => { });
+    throw new Error('Session expirée, veuillez vous reconnecter.');
   }
   return res;
 }
