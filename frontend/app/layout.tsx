@@ -11,7 +11,7 @@ import TopBar from './top-bar';
 import SavedDataSync from '@/components/saved-data-sync';
 import SiteChrome from './site-chrome';
 import { PwaRegister } from '@/components/pwa';
-import GlobalConfirm from '@/components/global-confirm'; // 👈 IMPORT AJOUTÉ
+import { DialogProvider } from '@/components/dialog-provider';
 
 export const metadata: Metadata = {
   title: {
@@ -42,38 +42,39 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="fr" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <GlobalConfirm /> {/* 👈 COMPOSANT AJOUTÉ ICI */}
-        <PwaRegister />
-        <CartProvider>
-          <FavoritesProvider>
-            <CustomerAuthProvider>
-              <SavedDataSync />
-              <SiteChrome
-                header={
-                  <>
-                    {/* Desktop : TopBar + Header, collés en haut ensemble */}
-                    <div className="sticky top-0 z-40">
-                      <TopBar />
-                      <Header />
-                    </div>
+        <DialogProvider>
+          <PwaRegister />
+          <CartProvider>
+            <FavoritesProvider>
+              <CustomerAuthProvider>
+                <SavedDataSync />
+                <SiteChrome
+                  header={
+                    <>
+                      {/* Desktop : TopBar + Header, collés en haut ensemble */}
+                      <div className="sticky top-0 z-40">
+                        <TopBar />
+                        <Header />
+                      </div>
 
-                    {/* Mobile : logo + recherche. Doit rester HORS du bloc sticky ci-dessus,
-                        car il gère lui-même son « collé en haut » (et son masquage au scroll). */}
-                    <MobileHeader />
-                  </>
-                }
-                footer={
-                  <>
-                    <Footer />
-                    <MobileNav />
-                  </>
-                }
-              >
-                {children}
-              </SiteChrome>
-            </CustomerAuthProvider>
-          </FavoritesProvider>
-        </CartProvider>
+                      {/* Mobile : logo + recherche. Doit rester HORS du bloc sticky ci-dessus,
+                          car il gère lui-même son « collé en haut » (et son masquage au scroll). */}
+                      <MobileHeader />
+                    </>
+                  }
+                  footer={
+                    <>
+                      <Footer />
+                      <MobileNav />
+                    </>
+                  }
+                >
+                  {children}
+                </SiteChrome>
+              </CustomerAuthProvider>
+            </FavoritesProvider>
+          </CartProvider>
+        </DialogProvider>
       </body>
     </html>
   );

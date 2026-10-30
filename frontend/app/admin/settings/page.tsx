@@ -3,8 +3,11 @@ import { useEffect, useState } from 'react';
 import { getAdmins, createAdmin, deleteAdmin } from '@/lib/api';
 import { UserPlus, Trash2, Loader2, CheckCircle2, Shield, Eye, EyeOff } from 'lucide-react';
 import AdminGuard from '@/lib/admin-guard';
+import { useDialog } from '@/components/dialog-provider';
 
 export default function AdminSettingsPage() {
+  const { confirmDialog, alertDialog } = useDialog();
+
   const [admins, setAdmins] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -71,12 +74,17 @@ export default function AdminSettingsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer cet administrateur ?')) return;
+    const ok = await confirmDialog({
+      title: 'Supprimer cet administrateur ?',
+      message: "Cette personne perdra immédiatement son accès à l'administration.",
+      confirmText: 'Supprimer',
+    });
+    if (!ok) return;
     try {
       await deleteAdmin(id);
       await load();
     } catch (err: any) {
-      alert(err.message);
+      await alertDialog(err.message, 'Suppression impossible');
     }
   };
 

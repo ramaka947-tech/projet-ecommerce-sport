@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -73,9 +73,16 @@ export class AuthService {
   }
 
   async removeAdmin(id: string, currentAdminId: string) {
-    if (id === currentAdminId) {
-      throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte.');
-    }
-    return this.prisma.admin.delete({ where: { id } });
+  if (id === currentAdminId) {
+    throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte.');
   }
+  try {
+    await this.prisma.admin.delete({ where: { id } });
+    return { success: true };
+  } catch (e: any) {
+    if (e.code === 'P2025') throw new NotFoundException('Administrateur introuvable.');
+    if (e.code === 'P2003') throw new BadRequestException('Cet administrateur est lié à des données et ne peut pas être supprimé.');
+    throw e;
+  }
+}
 }

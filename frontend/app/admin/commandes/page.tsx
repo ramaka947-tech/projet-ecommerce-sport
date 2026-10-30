@@ -7,7 +7,7 @@ import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import {
   Search, Loader2, Download, Eye, ChevronLeft, ChevronRight,
-  ShoppingCart, Clock, AlertCircle, DollarSign, Ban, CheckCircle2
+  ShoppingCart, Clock, AlertCircle, Banknote, Ban, CheckCircle2
 } from 'lucide-react';
 import { useCurrency } from '@/lib/currency';
 
@@ -145,7 +145,7 @@ export default function AdminOrdersPage() {
 
         <div className="col-span-2 rounded-xl border border-line bg-white p-4 shadow-sm md:p-5 lg:col-span-1">
           <div className="mb-2 flex items-center gap-2 md:gap-3">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"><DollarSign size={16} /></div>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"><Banknote size={16} /></div>
             <p className="truncate text-xs font-semibold text-ink/60 md:text-sm">CA (Livré)</p>
           </div>
           <p className="truncate text-lg font-bold text-ink md:text-xl">{formatPrice(totalRevenue)}</p>
