@@ -14,6 +14,7 @@ import {
   PanelLeftClose, PanelLeftOpen, User,
 } from 'lucide-react';
 import { removeToken } from '@/lib/auth';
+import AdminNotifications from '@/components/admin-notifications';
 
 type NavItem = { href: string; label: string; icon: any };
 type NavGroup = { id: string; label: string; icon: any; items: { href: string; label: string; icon?: any }[] };
@@ -357,13 +358,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Store size={16} /> Voir la boutique
           </Link>
 
-          <button
-            aria-label="Notifications"
-            className="relative flex size-11 shrink-0 items-center justify-center rounded-lg text-ink/60 transition hover:bg-canvas hover:text-ink md:size-auto md:p-2"
-          >
-            <Bell size={20} />
-            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-action md:top-2 md:right-2"></span>
-          </button>
+          <AdminNotifications />
 
           <div className="relative shrink-0" ref={menuRef}>
             <button

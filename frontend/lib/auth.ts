@@ -48,9 +48,10 @@ export async function refreshToken(): Promise<boolean> {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return false;
+        if (!res.ok) return false;
     const data = await res.json();
-    sessionStorage.setItem(TOKEN_KEY, data.access_token);
+    if (!data.accessToken) return false;
+    sessionStorage.setItem(TOKEN_KEY, data.accessToken);
     return true;
   } catch {
     return false;
