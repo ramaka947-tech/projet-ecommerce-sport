@@ -22,7 +22,8 @@ export const metadata: Metadata = {
     "Vente de tout genre d'équipements de sport au Sénégal : maillots, chaussures, ballons, musculation et plus.",
   applicationName: "AD Sport Solutions",
   icons: {
-    apple: "/icons/apple-touch-icon.png",
+    icon: "/logo.png",
+    apple: "/logo.png",
   },
   appleWebApp: {
     capable: true,
