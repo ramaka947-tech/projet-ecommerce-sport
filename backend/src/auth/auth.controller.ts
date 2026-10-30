@@ -18,7 +18,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   @Post('login')
   login(@Body() dto: LoginDto) {
@@ -31,7 +31,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   refresh(@Request() req: any) {
     return {
-      access_token: this.jwtService.sign({
+      accessToken: this.jwtService.sign({
         sub: req.user.id,
         email: req.user.email,
       }),
