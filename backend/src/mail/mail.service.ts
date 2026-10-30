@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import { promises as dns } from 'node:dns';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
@@ -15,37 +16,12 @@ const escapeHtml = (s: string) =>
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter | null = null;
 
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
-  // URL racine du site, sans slash final ni /admin/login
   private getSiteUrl(): string {
     const raw = process.env.FRONTEND_URL || DEFAULT_SITE_URL;
     return raw.replace(/\/admin\/login\/?$/, '').replace(/\/$/, '');
-  }
-
-  // Créé à la première utilisation : le .env est alors forcément chargé
-  private getTransporter(): nodemailer.Transporter | null {
-    if (this.transporter) return this.transporter;
-
-    const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
-    if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
-
-    const port = Number(SMTP_PORT) || 465;
-    this.transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port,
-      secure: port === 465,
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-      connectionTimeout: 30_000,
-      greetingTimeout: 30_000,
-      socketTimeout: 30_000,
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === 'production',
-      },
-    });
-    return this.transporter;
   }
 
   private async shopName(): Promise<string> {
@@ -57,34 +33,76 @@ export class MailService {
     }
   }
 
-  // Ne lève jamais d'erreur : un email raté ne doit pas empêcher l'inscription
+  private getCredentials() {
+    const user =
+      process.env.SMTP_USER || process.env.MAIL_USER || process.env.EMAIL_USER || process.env.GMAIL_USER;
+    const pass =
+      process.env.SMTP_PASS || process.env.MAIL_PASS || process.env.EMAIL_PASS || process.env.GMAIL_PASS;
+    return { user, pass: pass?.replace(/\s+/g, '') };
+  }
+
+  // Essaie le port 465 puis 587, en forçant l'IPv4 (évite les "Connection timeout")
+  private async send(to: string, subject: string, html: string, shop: string): Promise<boolean> {
+    const { user, pass } = this.getCredentials();
+    if (!user || !pass) {
+      this.logger.warn('Identifiants SMTP introuvables : email non envoyé.');
+      return false;
+    }
+
+    const configs = [
+      { port: 465, secure: true },
+      { port: 587, secure: false },
+    ];
+
+    // Résolution DNS par le système (comme PowerShell), puis connexion directe à l'IPv4
+    let ip = 'smtp.gmail.com';
+    try {
+      ip = (await dns.lookup('smtp.gmail.com', { family: 4 })).address;
+      this.logger.log(`[SMTP] smtp.gmail.com -> ${ip}`);
+    } catch (e: any) {
+      this.logger.error(`❌ DNS : ${e?.message || e}`);
+    }
+
+    for (const c of configs) {
+      try {
+        this.logger.log(`[SMTP] Tentative sur le port ${c.port}...`);
+        const transporter = nodemailer.createTransport({
+          host: ip,
+          port: c.port,
+          tls: {
+            servername: 'smtp.gmail.com',
+            // Antivirus local qui intercepte le SSL : on tolère en dev uniquement
+            rejectUnauthorized: process.env.NODE_ENV === 'production',
+          },
+          secure: c.secure,
+          requireTLS: !c.secure,
+          family: 4,
+          auth: { user, pass },
+          connectionTimeout: 10000,
+          greetingTimeout: 10000,
+          socketTimeout: 20000,
+        } as any);
+
+        await transporter.sendMail({
+          from: `"${shop}" <${user}>`,
+          to,
+          subject,
+          html,
+        });
+        this.logger.log(`✅ Email envoyé à ${to} (port ${c.port})`);
+        return true;
+      } catch (err: any) {
+        this.logger.error(`❌ Port ${c.port} : ${err?.message || err}`);
+      }
+    }
+    return false;
+  }
+
   async sendWelcome(to: string, name: string): Promise<void> {
     try {
-      const transporter = this.getTransporter();
-      if (!transporter) {
-        this.logger.warn("SMTP non configuré : l'email de bienvenue n'est pas envoyé.");
-        return;
-      }
-
       const shop = await this.shopName();
       const siteUrl = this.getSiteUrl();
-      const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = name.trim().split(/\s+/)[0] || name;
-
-      const text = [
-        `Bonjour ${first},`,
-        '',
-        `Bienvenue chez ${shop} ! Votre compte est créé.`,
-        '',
-        'Avec votre compte, vous pouvez :',
-        '- suivre vos commandes en temps réel,',
-        '- retrouver votre panier et vos favoris sur tous vos appareils,',
-        '- commander plus vite grâce à vos informations enregistrées.',
-        '',
-        `Découvrir la boutique : ${siteUrl}/boutique`,
-        '',
-        "Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement ce message.",
-      ].join('\n');
 
       const html = `
 <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;color:#111;line-height:1.5">
@@ -102,58 +120,23 @@ export class MailService {
   <p style="font-size:12px;color:#666">Si vous n'êtes pas à l'origine de cette inscription, ignorez simplement ce message.</p>
 </div>`;
 
-      await transporter.sendMail({
-        from,
-        to,
-        subject: `Bienvenue chez ${shop}`,
-        text,
-        html,
-      });
+      await this.send(to, `Bienvenue chez ${shop}`, html, shop);
     } catch (err: any) {
-      this.logger.error(`Échec d'envoi de l'email de bienvenue : ${err?.message || err}`);
+      this.logger.error(`❌ Échec email de bienvenue : ${err?.message || err}`);
     }
   }
 
-  // Ne lève jamais d'erreur : un email raté ne doit pas empêcher la création du compte
   async sendAdminWelcome(to: string, name: string, password: string): Promise<boolean> {
     try {
-      const transporter = this.getTransporter();
-      if (!transporter) {
-        this.logger.warn("SMTP non configuré : l'email admin n'est pas envoyé.");
-        return false;
-      }
-
       const shop = await this.shopName();
-      // Lien direct vers la page de connexion de l'administration
       const loginUrl = `${this.getSiteUrl()}/admin/login`;
-      const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = (name || '').trim().split(/\s+/)[0] || '';
 
-      const C = {
-        ink: '#111111',
-        action: '#E11D2E',
-        canvas: '#F5F5F3',
-        line: '#E7E7E4',
-        muted: '#6B6B6B',
-      };
-
-      // "AD Sport Solutions" -> "AD Sport" en blanc + "Solutions" en rouge
+      const C = { ink: '#111111', action: '#E11D2E', canvas: '#F5F5F3', line: '#E7E7E4', muted: '#6B6B6B' };
       const words = shop.trim().split(/\s+/);
-      const brand =
-        words.length > 1
-          ? `<span style="color:#ffffff">${escapeHtml(words.slice(0, -1).join(' '))} </span><span style="color:${C.action}">${escapeHtml(words[words.length - 1])}</span>`
-          : `<span style="color:#ffffff">${escapeHtml(shop)}</span>`;
-
-      const text = [
-        `Bonjour ${first},`,
-        '',
-        `Un compte administrateur ${shop} vient d'être créé pour vous.`,
-        '',
-        `Email : ${to}`,
-        `Mot de passe : ${password}`,
-        '',
-        `Se connecter : ${loginUrl}`,
-      ].join('\n');
+      const brand = words.length > 1
+        ? `<span style="color:#ffffff">${escapeHtml(words.slice(0, -1).join(' '))} </span><span style="color:${C.action}">${escapeHtml(words[words.length - 1])}</span>`
+        : `<span style="color:#ffffff">${escapeHtml(shop)}</span>`;
 
       const html = `
 <!DOCTYPE html>
@@ -162,20 +145,16 @@ export class MailService {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.canvas};padding:32px 12px">
     <tr><td align="center">
       <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid ${C.line};border-radius:16px;overflow:hidden">
-
         <tr><td align="center" style="background:${C.ink};padding:24px">
           <span style="font-size:24px;font-weight:800;letter-spacing:1px">${brand}</span>
         </td></tr>
         <tr><td style="height:4px;background:${C.action};line-height:4px;font-size:4px">&nbsp;</td></tr>
-
         <tr><td style="padding:32px 32px 8px">
           <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:${C.ink}">Bienvenue${first ? ', ' + escapeHtml(first) : ''}</h1>
           <p style="margin:0;font-size:15px;line-height:1.6;color:${C.ink}">
-            Un compte administrateur <b>${escapeHtml(shop)}</b> vient d'être créé pour vous.
-            Voici vos identifiants de connexion :
+            Un compte administrateur <b>${escapeHtml(shop)}</b> vient d'être créé pour vous. Voici vos identifiants :
           </p>
         </td></tr>
-
         <tr><td style="padding:16px 32px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.canvas};border:1px solid ${C.line};border-radius:12px">
             <tr><td style="padding:16px 18px">
@@ -189,31 +168,21 @@ export class MailService {
             </td></tr>
           </table>
         </td></tr>
-
         <tr><td align="center" style="padding:8px 32px 32px">
           <a href="${loginUrl}" style="display:inline-block;background:${C.action};color:#ffffff;text-decoration:none;font-weight:bold;font-size:15px;padding:14px 32px;border-radius:10px">Se connecter à l'administration</a>
         </td></tr>
-
         <tr><td style="background:${C.canvas};border-top:1px solid ${C.line};padding:18px 32px;text-align:center;font-size:12px;color:${C.muted}">
           © ${new Date().getFullYear()} ${escapeHtml(shop)}
         </td></tr>
-
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
 
-      await transporter.sendMail({
-        from,
-        to,
-        subject: `Votre accès administrateur ${shop}`,
-        text,
-        html,
-      });
-      return true;
+      return await this.send(to, `Votre accès administrateur ${shop}`, html, shop);
     } catch (err: any) {
-      this.logger.error(`Échec d'envoi de l'email admin : ${err?.message || err}`);
+      this.logger.error(`❌ Échec email admin : ${err?.message || err}`);
       return false;
     }
   }
