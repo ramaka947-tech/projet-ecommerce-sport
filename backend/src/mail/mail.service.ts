@@ -3,6 +3,7 @@ import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 const DEFAULT_SHOP_NAME = 'AD Sport Solutions';
+const DEFAULT_SITE_URL = 'https://projet-ecommerce-sport-63a1.vercel.app';
 
 const escapeHtml = (s: string) =>
   s
@@ -18,6 +19,12 @@ export class MailService {
 
   constructor(private prisma: PrismaService) { }
 
+  // URL racine du site, sans slash final ni /admin/login
+  private getSiteUrl(): string {
+    const raw = process.env.FRONTEND_URL || DEFAULT_SITE_URL;
+    return raw.replace(/\/admin\/login\/?$/, '').replace(/\/$/, '');
+  }
+
   // Créé à la première utilisation : le .env est alors forcément chargé
   private getTransporter(): nodemailer.Transporter | null {
     if (this.transporter) return this.transporter;
@@ -31,6 +38,10 @@ export class MailService {
       port,
       secure: port === 465,
       auth: { user: SMTP_USER, pass: SMTP_PASS },
+      pool: true,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 15_000,
       tls: {
         rejectUnauthorized: process.env.NODE_ENV === 'production',
       },
@@ -57,7 +68,7 @@ export class MailService {
       }
 
       const shop = await this.shopName();
-      const siteUrl = (process.env.FRONTEND_URL || 'https://projet-ecommerce-sport-63a1.vercel.app/admin/login').replace(/\/$/, '');
+      const siteUrl = this.getSiteUrl();
       const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = name.trim().split(/\s+/)[0] || name;
 
@@ -114,12 +125,11 @@ export class MailService {
       }
 
       const shop = await this.shopName();
-      const siteUrl = (process.env.FRONTEND_URL || 'http://https://projet-ecommerce-sport-63a1.vercel.app/admin/login').replace(/\/$/, '');
-      const loginUrl = `${siteUrl}/admin/login`;
+      // Lien direct vers la page de connexion de l'administration
+      const loginUrl = `${this.getSiteUrl()}/admin/login`;
       const from = process.env.MAIL_FROM || `${shop} <${process.env.SMTP_USER}>`;
       const first = (name || '').trim().split(/\s+/)[0] || '';
 
-      // ⚠️ Remplace ces couleurs par celles de ton design
       const C = {
         ink: '#111111',
         action: '#E11D2E',
@@ -129,7 +139,6 @@ export class MailService {
       };
 
       // "AD Sport Solutions" -> "AD Sport" en blanc + "Solutions" en rouge
-      // (dernier mot en rouge ; si le nom n'a qu'un mot, tout reste en blanc)
       const words = shop.trim().split(/\s+/);
       const brand =
         words.length > 1
