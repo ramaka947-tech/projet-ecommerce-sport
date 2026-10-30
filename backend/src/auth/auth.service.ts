@@ -20,7 +20,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private mail: MailService,
-  ) {}
+  ) { }
 
   async login(dto: LoginDto) {
     const admin = await this.prisma.admin.findUnique({
@@ -55,7 +55,7 @@ export class AuthService {
   }
 
   async createAdmin(data: { name: string; email: string; password: string }) {
-        const pwdError = validatePassword(data.password);
+    const pwdError = validatePassword(data.password);
     if (pwdError) throw new BadRequestException(pwdError);
     const existing = await this.prisma.admin.findUnique({ where: { email: data.email } });
     if (existing) throw new BadRequestException('Cet email est déjà utilisé.');
@@ -67,22 +67,21 @@ export class AuthService {
     });
 
     // Mot de passe en clair (avant hash), utilisé uniquement pour le mail
-    const emailSent = await this.mail.sendAdminWelcome(data.email, data.name, data.password);
-
-    return { ...admin, emailSent };
+    void this.mail.sendAdminWelcome(data.email, data.name, data.password);
+    return { ...admin, emailSent: true };
   }
 
   async removeAdmin(id: string, currentAdminId: string) {
-  if (id === currentAdminId) {
-    throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte.');
+    if (id === currentAdminId) {
+      throw new BadRequestException('Vous ne pouvez pas supprimer votre propre compte.');
+    }
+    try {
+      await this.prisma.admin.delete({ where: { id } });
+      return { success: true };
+    } catch (e: any) {
+      if (e.code === 'P2025') throw new NotFoundException('Administrateur introuvable.');
+      if (e.code === 'P2003') throw new BadRequestException('Cet administrateur est lié à des données et ne peut pas être supprimé.');
+      throw e;
+    }
   }
-  try {
-    await this.prisma.admin.delete({ where: { id } });
-    return { success: true };
-  } catch (e: any) {
-    if (e.code === 'P2025') throw new NotFoundException('Administrateur introuvable.');
-    if (e.code === 'P2003') throw new BadRequestException('Cet administrateur est lié à des données et ne peut pas être supprimé.');
-    throw e;
-  }
-}
 }
