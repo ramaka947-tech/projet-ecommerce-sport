@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/api';
+import { LEGAL_LINKS } from '@/lib/legal';
 import ShopName from '@/components/shop-name';
 import { InstallAppButton } from '@/components/pwa';
 
@@ -66,6 +67,10 @@ export default function Footer() {
   const link =
     'inline-flex min-h-11 items-center break-words text-white/70 transition active:text-white md:min-h-0 md:hover:text-white';
 
+  // Liens légaux (barre du bas) : même logique tactile, un ton plus discret
+  const legalLink =
+    'inline-flex min-h-11 items-center text-white/60 transition active:text-white md:min-h-0 md:hover:text-white';
+
   return (
     <footer className="mt-auto bg-ink text-white">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-8 px-4 py-10 sm:px-6 md:grid-cols-4 md:gap-8 md:py-12">
@@ -120,7 +125,6 @@ export default function Footer() {
           <ul className="space-y-0 text-sm md:space-y-2">
             <li><Link href="/contact" className={link}>Contact</Link></li>
             <li><Link href="/a-propos" className={link}>À propos</Link></li>
-            <li><Link href="/cgv" className={link}>CGV</Link></li>
           </ul>
         </div>
 
@@ -142,8 +146,21 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-4 py-4 text-center text-xs text-white/60">
-        © {new Date().getFullYear()} {shopName}. Tous droits réservés.
+      <div className="border-t border-white/10 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))] text-center text-xs text-white/60 md:py-4">
+        <nav aria-label="Informations légales" className="mx-auto max-w-7xl">
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-0 md:gap-y-1">
+            {LEGAL_LINKS.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className={legalLink}>
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <p className="mt-1 md:mt-3">
+          © {new Date().getFullYear()} {shopName}. Tous droits réservés.
+        </p>
       </div>
     </footer>
   );
